@@ -10,7 +10,6 @@ var app = builder.Build();
 await using var scope = app.Services.CreateAsyncScope();
 var db = scope.ServiceProvider.GetRequiredService<HisDbContext>();
 
-await db.Database.EnsureCreatedAsync();
 await db.Database.MigrateAsync();
 Console.WriteLine("Migration complete.");
 
