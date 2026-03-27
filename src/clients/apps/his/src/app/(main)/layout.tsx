@@ -15,6 +15,7 @@ const navItems = [
   { label: 'Ward Board (IPD)', href: '/ward' },
   { label: 'รับผู้ป่วยใน (IPD)', href: '/admissions' },
   { label: 'IPD Chart', href: '/ipd-chart' },
+  { label: 'ห้องฉุกเฉิน (ER)', href: '/er' },
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
