@@ -4,6 +4,7 @@ using TtssHis.Shared.Entities.Billing;
 using TtssHis.Shared.Entities.Core;
 using TtssHis.Shared.Entities.Encounter;
 using TtssHis.Shared.Entities.Insurance;
+using TtssHis.Shared.Entities.Ipd;
 using TtssHis.Shared.Entities.Medical;
 using TtssHis.Shared.Entities.Patient;
 using TtssHis.Shared.Entities.Pharmacy;
@@ -49,6 +50,12 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
     public DbSet<Invoice> Invoices { get; set; } = null!;
     public DbSet<InvoiceItem> InvoiceItems { get; set; } = null!;
     public DbSet<Receipt> Receipts { get; set; } = null!;
+
+    // Phase 3 — IPD
+    public DbSet<Ward> Wards { get; set; } = null!;
+    public DbSet<Bed> Beds { get; set; } = null!;
+    public DbSet<NursingNote> NursingNotes { get; set; } = null!;
+    public DbSet<DoctorOrder> DoctorOrders { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -110,6 +117,28 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
         {
             e.HasIndex(r => r.InvoiceId).IsUnique();
             e.HasIndex(r => r.ReceiptNo).IsUnique();
+        });
+
+        // Phase 3 indexes
+        modelBuilder.Entity<Ward>(e =>
+        {
+            e.HasIndex(w => w.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<Bed>(e =>
+        {
+            e.HasIndex(b => new { b.WardId, b.BedNo }).IsUnique();
+            e.HasIndex(b => b.CurrentEncounterId).IsUnique().HasFilter("\"CurrentEncounterId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<NursingNote>(e =>
+        {
+            e.HasIndex(n => new { n.EncounterId, n.RecordedDate });
+        });
+
+        modelBuilder.Entity<DoctorOrder>(e =>
+        {
+            e.HasIndex(o => new { o.EncounterId, o.Status });
         });
 
         // Seed roles

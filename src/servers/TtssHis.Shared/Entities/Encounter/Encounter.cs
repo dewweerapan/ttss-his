@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TtssHis.Shared.Entities.Billing;
 using TtssHis.Shared.Entities.Core;
+using TtssHis.Shared.Entities.Ipd;
 using TtssHis.Shared.Entities.Medical;
 using TtssHis.Shared.Entities.Pharmacy;
 using TtssHis.Shared.Entities.Queue;
@@ -53,4 +54,8 @@ public sealed class Encounter
     public ICollection<VitalSign> VitalSigns { get; set; } = [];
     public ICollection<DrugOrder> DrugOrders { get; set; } = [];
     public Invoice? Invoice { get; set; }
+
+    // Phase 3 navigation properties
+    public ICollection<NursingNote> NursingNotes { get; set; } = [];
+    public ICollection<DoctorOrder> DoctorOrders { get; set; } = [];
 }

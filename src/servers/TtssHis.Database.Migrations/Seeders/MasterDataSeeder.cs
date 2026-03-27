@@ -15,6 +15,7 @@ public static class MasterDataSeeder
         await SeedUsersAsync(db);
         await SeedCoveragesAsync(db);
         await SeedProductsAsync(db);
+        await SeedWardsAsync(db);
         await db.SaveChangesAsync();
         Console.WriteLine("Master data seeded.");
     }
@@ -136,5 +137,45 @@ public static class MasterDataSeeder
             new Coverage { Id = "cov-civil", Code = "CIVIL", Name = "สวัสดิการข้าราชการ", NameEn = "Civil Servant", Type = 1, IsActive = true, CreatedDate = DateTime.UtcNow },
         };
         await db.Coverages.AddRangeAsync(coverages);
+    }
+
+    private static async Task SeedWardsAsync(HisDbContext db)
+    {
+        if (db.Wards.Any()) return;
+
+        var now = DateTime.UtcNow;
+
+        var wards = new[]
+        {
+            ("ward-gen", "GEN", "หอผู้ป่วยทั่วไป", 1, 10),
+            ("ward-icu", "ICU", "หน่วยดูแลผู้ป่วยวิกฤต", 2, 6),
+        };
+
+        foreach (var (wardId, code, name, type, totalBeds) in wards)
+        {
+            await db.Wards.AddAsync(new TtssHis.Shared.Entities.Ipd.Ward
+            {
+                Id          = wardId,
+                Code        = code,
+                Name        = name,
+                Type        = type,
+                TotalBeds   = totalBeds,
+                IsActive    = true,
+                CreatedDate = now,
+            });
+
+            for (var i = 1; i <= totalBeds; i++)
+            {
+                await db.Beds.AddAsync(new TtssHis.Shared.Entities.Ipd.Bed
+                {
+                    Id          = $"{wardId}-bed-{i:D2}",
+                    BedNo       = $"{code}{i:D2}",
+                    WardId      = wardId,
+                    Status      = 1,
+                    IsActive    = true,
+                    CreatedDate = now,
+                });
+            }
+        }
     }
 }
