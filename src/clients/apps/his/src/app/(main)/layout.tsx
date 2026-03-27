@@ -12,6 +12,9 @@ const navItems = [
   { label: 'ตรวจ OPD (DPO)', href: '/doctor' },
   { label: 'เภสัช (TPD)', href: '/pharmacy' },
   { label: 'การเงิน (BIL)', href: '/billing' },
+  { label: 'Ward Board (IPD)', href: '/ward' },
+  { label: 'รับผู้ป่วยใน (IPD)', href: '/admissions' },
+  { label: 'IPD Chart', href: '/ipd-chart' },
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
