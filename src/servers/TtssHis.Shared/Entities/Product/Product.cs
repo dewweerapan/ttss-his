@@ -16,6 +16,12 @@ public sealed class Product
     [Comment("หน่วย เช่น เม็ด, ขวด, ครั้ง")]
     public string? Unit { get; set; }
 
+    [Comment("จำนวนคงเหลือในคลัง")]
+    public int StockQuantity { get; set; } = 0;
+
+    [Comment("จำนวนขั้นต่ำที่ควรแจ้งเตือน")]
+    public int ReorderLevel { get; set; } = 10;
+
     public bool IsBillable { get; set; } = true;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedDate { get; set; }

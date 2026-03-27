@@ -201,6 +201,41 @@ namespace TtssHis.Database.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.Core.AuditLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Username")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Core.Division", b =>
                 {
                     b.Property<string>("Id")
@@ -1068,6 +1103,14 @@ namespace TtssHis.Database.Migrations.Migrations
                         .HasColumnType("text")
                         .HasComment("รหัสผู้ป่วย (UUID)");
 
+                    b.Property<string>("Allergy")
+                        .HasColumnType("text")
+                        .HasComment("แพ้ยา / แพ้สาร (ชื่อยาหรือสารคั่นด้วยจุลภาค)");
+
+                    b.Property<string>("AllergyNote")
+                        .HasColumnType("text")
+                        .HasComment("รายละเอียดอาการแพ้");
+
                     b.Property<DateOnly?>("Birthdate")
                         .HasColumnType("date")
                         .HasComment("วันเกิด");
@@ -1439,6 +1482,14 @@ namespace TtssHis.Database.Migrations.Migrations
 
                     b.Property<string>("NameEn")
                         .HasColumnType("text");
+
+                    b.Property<int>("ReorderLevel")
+                        .HasColumnType("integer")
+                        .HasComment("จำนวนขั้นต่ำที่ควรแจ้งเตือน");
+
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("integer")
+                        .HasComment("จำนวนคงเหลือในคลัง");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer")

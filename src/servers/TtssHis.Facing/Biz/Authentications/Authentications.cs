@@ -6,10 +6,10 @@ namespace TtssHis.Facing.Biz.Authentications;
 
 [ApiController]
 [Route("api/auth")]
-public sealed class Authentications(HisDbContext db, JwtTokenService tokenService) : ControllerBase
+public sealed class Authentications(HisDbContext db, JwtTokenService tokenService, IHisAuditService audit) : ControllerBase
 {
     [HttpPost("login")]
-    public ActionResult<LoginResponse> Login([FromBody] LoginRequest request)
+    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
             return BadRequest("Username and password are required.");
@@ -34,6 +34,7 @@ public sealed class Authentications(HisDbContext db, JwtTokenService tokenServic
         };
 
         var token = tokenService.GenerateToken(fullUser);
+        await audit.LogAsync("LOGIN", "User", user.Id, user.Username);
         return Ok(new LoginResponse(token, user.Id, user.Username, user.FirstName, user.LastName, user.RoleId));
     }
 }

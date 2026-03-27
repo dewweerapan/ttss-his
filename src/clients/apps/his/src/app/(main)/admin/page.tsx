@@ -11,7 +11,7 @@ import { api } from '@/lib/api';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type UserDto = { id: string; username: string; firstName: string; lastName: string; roleId: string; isActive: boolean; createdDate: string };
-type ProductDto = { id: string; code: string; name: string; type: number; unit: string; isActive: boolean; price: number };
+type ProductDto = { id: string; code: string; name: string; type: number; unit: string; isActive: boolean; price: number; stockQuantity: number; reorderLevel: number };
 type DivisionDto = { id: string; code: string; name: string; type: number; isActive: boolean };
 
 const ROLE_OPTIONS = [
@@ -62,6 +62,13 @@ export default function AdminPage() {
   const [pPrice, setPPrice] = useState<number | string>(0);
   const [pIsActive, setPIsActive] = useState(true);
   const [productSearch, setProductSearch] = useState('');
+
+  // ── Stock adjust ───────────────────────────────────────────────────────
+  const [stockProduct, setStockProduct] = useState<ProductDto | null>(null);
+  const [stockOpen, { open: openStock, close: closeStock }] = useDisclosure(false);
+  const [stockQty, setStockQty] = useState<number | string>(0);
+  const [stockMode, setStockMode] = useState<string | null>('add');
+  const [stockReorder, setStockReorder] = useState<number | string>(10);
 
   // ── Divisions ──────────────────────────────────────────────────────────
   const [divOpen, { open: openDiv, close: closeDiv }] = useDisclosure(false);
@@ -128,6 +135,14 @@ export default function AdminPage() {
     onError: (e: Error) => setErrorMsg(e.message),
   });
 
+  const adjustStockMutation = useMutation({
+    mutationFn: () => api.patch(`/api/admin/products/${stockProduct!.id}/stock`, {
+      quantity: Number(stockQty), mode: stockMode, reorderLevel: Number(stockReorder),
+    }),
+    onSuccess: () => { setSuccessMsg('ปรับ Stock สำเร็จ'); setErrorMsg(''); closeStock(); refetchProducts(); },
+    onError: (e: Error) => setErrorMsg(e.message),
+  });
+
   // ── Mutations — Divisions ─────────────────────────────────────────────
   const createDivMutation = useMutation({
     mutationFn: () => api.post('/api/admin/divisions', { code: dCode, name: dName, type: Number(dType) }),
@@ -173,6 +188,7 @@ export default function AdminPage() {
           <Tabs.Tab value="users">ผู้ใช้งาน</Tabs.Tab>
           <Tabs.Tab value="products">รายการยา/บริการ</Tabs.Tab>
           <Tabs.Tab value="divisions">แผนก</Tabs.Tab>
+          <Tabs.Tab value="stock-receive">รับสินค้า (PO)</Tabs.Tab>
         </Tabs.List>
 
         {/* ── USERS TAB ─────────────────────────────────────────────────── */}
@@ -231,13 +247,14 @@ export default function AdminPage() {
                     <Table.Th>ประเภท</Table.Th>
                     <Table.Th>หน่วย</Table.Th>
                     <Table.Th ta="right">ราคา (฿)</Table.Th>
+                    <Table.Th ta="right">คงเหลือ</Table.Th>
                     <Table.Th>สถานะ</Table.Th>
                     <Table.Th>Actions</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                   {products.length === 0 ? (
-                    <Table.Tr><Table.Td colSpan={7}><Text ta="center" c="dimmed">ไม่มีข้อมูล</Text></Table.Td></Table.Tr>
+                    <Table.Tr><Table.Td colSpan={8}><Text ta="center" c="dimmed">ไม่มีข้อมูล</Text></Table.Td></Table.Tr>
                   ) : products.map(p => (
                     <Table.Tr key={p.id}>
                       <Table.Td><Text fw={600} size="sm">{p.code}</Text></Table.Td>
@@ -245,10 +262,16 @@ export default function AdminPage() {
                       <Table.Td><Text size="sm">{PRODUCT_TYPE_OPTIONS.find(t => t.value === String(p.type))?.label ?? '-'}</Text></Table.Td>
                       <Table.Td><Text size="sm">{p.unit}</Text></Table.Td>
                       <Table.Td ta="right"><Text size="sm">{p.price.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</Text></Table.Td>
+                      <Table.Td ta="right">
+                        <Badge size="sm" color={(p.stockQuantity ?? 0) <= (p.reorderLevel ?? 10) ? 'red' : 'teal'}>
+                          {p.stockQuantity ?? 0}
+                        </Badge>
+                      </Table.Td>
                       <Table.Td><Badge size="sm" color={p.isActive ? 'green' : 'gray'}>{p.isActive ? 'ใช้งาน' : 'ปิด'}</Badge></Table.Td>
                       <Table.Td>
                         <Group gap="xs">
                           <Button size="xs" variant="outline" onClick={() => openEditProduct(p)}>แก้ไข</Button>
+                          <Button size="xs" color="teal" variant="subtle" onClick={() => { setStockProduct(p); setStockQty(0); setStockMode('add'); setStockReorder(p.reorderLevel ?? 10); openStock(); }}>Stock</Button>
                           <Button size="xs" color="red" variant="subtle" loading={deleteProductMutation.isPending} onClick={() => deleteProductMutation.mutate(p.id)}>ลบ</Button>
                         </Group>
                       </Table.Td>
@@ -295,6 +318,15 @@ export default function AdminPage() {
               </Table>
             </Paper>
           </Stack>
+        </Tabs.Panel>
+
+        {/* ── STOCK RECEIVE TAB ──────────────────────────────────────────── */}
+        <Tabs.Panel value="stock-receive" pt="sm">
+          <StockReceivePanel
+            products={products}
+            onSuccess={(msg) => { setSuccessMsg(msg); setErrorMsg(''); refetchProducts(); }}
+            onError={(msg) => setErrorMsg(msg)}
+          />
         </Tabs.Panel>
       </Tabs>
 
@@ -357,6 +389,107 @@ export default function AdminPage() {
           </Group>
         </Stack>
       </Modal>
+
+      {/* Stock adjust modal */}
+      <Modal opened={stockOpen} onClose={closeStock} title={`ปรับ Stock — ${stockProduct?.name ?? ''}`}>
+        <Stack gap="sm">
+          <Text size="sm" c="dimmed">คงเหลือปัจจุบัน: <strong>{stockProduct?.stockQuantity ?? 0}</strong> {stockProduct?.unit}</Text>
+          <Select label="วิธีปรับ" data={[{ value: 'add', label: 'เพิ่ม/ลด (บวก/ลบจากจำนวนปัจจุบัน)' }, { value: 'set', label: 'ตั้งค่าใหม่ (กำหนดจำนวนโดยตรง)' }]} value={stockMode} onChange={setStockMode} />
+          <NumberInput label={stockMode === 'set' ? 'จำนวนใหม่' : 'จำนวนที่เพิ่ม/ลด'} value={stockQty} onChange={setStockQty} />
+          <NumberInput label="Reorder Level (แจ้งเตือนเมื่อต่ำกว่า)" value={stockReorder} onChange={setStockReorder} min={0} />
+          {errorMsg && <Alert color="red">{errorMsg}</Alert>}
+          <Group justify="flex-end">
+            <Button variant="default" onClick={closeStock}>ยกเลิก</Button>
+            <Button color="teal" loading={adjustStockMutation.isPending} onClick={() => adjustStockMutation.mutate()}>บันทึก</Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </Stack>
+  );
+}
+
+// ── Stock Receive Panel ──────────────────────────────────────────────────────
+function StockReceivePanel({ products, onSuccess, onError }: {
+  products: ProductDto[];
+  onSuccess: (msg: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const [lines, setLines] = useState<{ productId: string | null; qty: number | string }[]>([
+    { productId: null, qty: 0 },
+  ]);
+  const [supplier, setSupplier] = useState('');
+  const [isPending, setIsPending] = useState(false);
+
+  const { data: lowStock = [] } = useQuery({
+    queryKey: ['admin', 'stock', 'low'],
+    queryFn: () => api.get<ProductDto[]>('/api/admin/stock/low'),
+  });
+
+  const addLine = () => setLines(prev => [...prev, { productId: null, qty: 0 }]);
+  const removeLine = (idx: number) => setLines(prev => prev.filter((_, i) => i !== idx));
+  const updateLine = (idx: number, field: 'productId' | 'qty', value: string | null | number) =>
+    setLines(prev => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l));
+
+  const handleReceive = async () => {
+    const valid = lines.filter(l => l.productId && Number(l.qty) > 0);
+    if (valid.length === 0) { onError('กรุณาระบุรายการและจำนวน'); return; }
+    setIsPending(true);
+    try {
+      const res = await api.post<{ message: string }>('/api/admin/stock/receive', {
+        lines: valid.map(l => ({ productId: l.productId, quantity: Number(l.qty) })),
+        supplier: supplier || null,
+        notes: null,
+      });
+      onSuccess(res.message);
+      setLines([{ productId: null, qty: 0 }]);
+      setSupplier('');
+    } catch (e: any) {
+      onError(e.message);
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const prodOptions = products.map(p => ({ value: p.id, label: `${p.code} — ${p.name}` }));
+
+  return (
+    <Stack gap="md">
+      {lowStock.length > 0 && (
+        <Alert color="orange" title={`⚠️ สินค้าใกล้หมด (${lowStock.length} รายการ)`}>
+          {lowStock.map(p => (
+            <Text key={p.id} size="sm">{p.code} — {p.name}: <strong>{p.stockQuantity}</strong> {p.unit} (Reorder: {p.reorderLevel})</Text>
+          ))}
+        </Alert>
+      )}
+
+      <Paper withBorder p="md">
+        <Stack gap="sm">
+          <Text fw={600}>รับสินค้าเข้าคลัง (Stock In)</Text>
+          <TextInput label="ผู้จัดจำหน่าย / Supplier" value={supplier} onChange={e => setSupplier(e.target.value)} placeholder="เช่น บริษัท ABC เภสัช" />
+          {lines.map((line, idx) => (
+            <Group key={idx} align="flex-end" gap="sm">
+              <Select
+                label={idx === 0 ? 'สินค้า' : undefined}
+                data={prodOptions} value={line.productId} onChange={v => updateLine(idx, 'productId', v)}
+                searchable placeholder="เลือกสินค้า"
+                style={{ flex: 1 }}
+              />
+              <NumberInput
+                label={idx === 0 ? 'จำนวน' : undefined}
+                value={line.qty} onChange={v => updateLine(idx, 'qty', v)}
+                min={1} style={{ width: 100 }}
+              />
+              {lines.length > 1 && (
+                <Button size="sm" color="red" variant="subtle" onClick={() => removeLine(idx)}>ลบ</Button>
+              )}
+            </Group>
+          ))}
+          <Group>
+            <Button variant="light" size="xs" onClick={addLine}>+ เพิ่มรายการ</Button>
+            <Button color="teal" loading={isPending} onClick={handleReceive}>บันทึกรับสินค้า</Button>
+          </Group>
+        </Stack>
+      </Paper>
     </Stack>
   );
 }

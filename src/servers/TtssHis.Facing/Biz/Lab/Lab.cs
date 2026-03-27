@@ -87,6 +87,19 @@ public sealed class LabController(HisDbContext db) : ControllerBase
         return Ok(orders.Select(ToDto));
     }
 
+    // ── GET SINGLE LAB ORDER ──────────────────────────────────────────────
+    /// <summary>GET /api/lab-orders/{id}</summary>
+    [HttpGet("api/lab-orders/{id}")]
+    public async Task<ActionResult<LabOrderDto>> GetById(string id)
+    {
+        var order = await db.LabOrders
+            .Include(o => o.Items).ThenInclude(i => i.Result)
+            .Include(o => o.Encounter).ThenInclude(e => e!.Patient)
+            .FirstOrDefaultAsync(o => o.Id == id);
+        if (order is null) return NotFound();
+        return Ok(ToDto(order));
+    }
+
     // ── RECEIVE SPECIMEN ──────────────────────────────────────────────────
     /// <summary>PATCH /api/lab-orders/{id}/receive</summary>
     [HttpPatch("api/lab-orders/{id}/receive")]

@@ -59,6 +59,12 @@ public sealed class Patient
     [Comment("เบอร์โทรศัพท์")]
     public string? PhoneNumber { get; set; }
 
+    [Comment("แพ้ยา / แพ้สาร (ชื่อยาหรือสารคั่นด้วยจุลภาค)")]
+    public string? Allergy { get; set; }
+
+    [Comment("รายละเอียดอาการแพ้")]
+    public string? AllergyNote { get; set; }
+
     public bool IsAlive { get; set; } = true;
     public bool IsActive { get; set; } = true;
     public string? CreatedBy { get; set; }

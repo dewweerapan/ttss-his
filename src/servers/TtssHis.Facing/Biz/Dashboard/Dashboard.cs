@@ -146,6 +146,74 @@ public sealed class DashboardController(HisDbContext db) : ControllerBase
 
         return Ok(result);
     }
+
+    // ── MONTHLY REPORT ────────────────────────────────────────────────────
+    /// <summary>GET /api/reports/monthly?year=2026&month=3</summary>
+    [HttpGet("api/reports/monthly")]
+    public ActionResult<MonthlyReportDto> GetMonthlyReport(
+        [FromQuery] int? year = null,
+        [FromQuery] int? month = null)
+    {
+        var now = DateTime.UtcNow;
+        var y = year ?? now.Year;
+        var m = month ?? now.Month;
+
+        var from = new DateOnly(y, m, 1);
+        var to = from.AddMonths(1).AddDays(-1);
+
+        var encounters = db.Encounters
+            .Where(e => e.IsActive && e.DeletedDate == null
+                && DateOnly.FromDateTime(e.AdmissionDate) >= from
+                && DateOnly.FromDateTime(e.AdmissionDate) <= to)
+            .ToList();
+
+        var totalOpd = encounters.Count(e => e.Type == 1);
+        var totalIpd = encounters.Count(e => e.Type == 2);
+        var totalEr  = encounters.Count(e => e.Type == 3);
+
+        var receipts = db.Receipts
+            .Where(r => DateOnly.FromDateTime(r.PaidAt) >= from && DateOnly.FromDateTime(r.PaidAt) <= to)
+            .ToList();
+        var totalRevenue = db.Invoices
+            .Where(i => DateOnly.FromDateTime(i.IssuedAt) >= from && DateOnly.FromDateTime(i.IssuedAt) <= to)
+            .Sum(i => (decimal?)i.TotalAmount) ?? 0m;
+        var totalPaid    = receipts.Sum(r => r.Amount);
+        var totalPending = totalRevenue - totalPaid;
+
+        // Top diagnoses
+        var topDiagnoses = db.Diagnoses
+            .Include(d => d.Icd10)
+            .Include(d => d.Encounter)
+            .Where(d => d.DeletedDate == null && d.Encounter != null
+                && DateOnly.FromDateTime(d.Encounter.AdmissionDate) >= from
+                && DateOnly.FromDateTime(d.Encounter.AdmissionDate) <= to
+                && d.Icd10 != null)
+            .AsEnumerable()
+            .GroupBy(d => new { d.Icd10!.Code, d.Icd10.Name })
+            .Select(g => new TopDiagnosisDto(g.Key.Code, g.Key.Name, g.Count()))
+            .OrderByDescending(x => x.Count)
+            .Take(10)
+            .ToList();
+
+        // Daily OPD
+        var dailyOpd = encounters
+            .Where(e => e.Type == 1)
+            .GroupBy(e => DateOnly.FromDateTime(e.AdmissionDate))
+            .OrderBy(g => g.Key)
+            .Select(g => new DailyCountDto(g.Key.ToString("yyyy-MM-dd"), g.Count()))
+            .ToList();
+
+        // Daily revenue
+        var dailyRevenue = receipts
+            .GroupBy(r => DateOnly.FromDateTime(r.PaidAt))
+            .OrderBy(g => g.Key)
+            .Select(g => new DailyAmountDto(g.Key.ToString("yyyy-MM-dd"), g.Sum(r => r.Amount)))
+            .ToList();
+
+        return Ok(new MonthlyReportDto(y, m, totalOpd, totalIpd, totalEr,
+            totalRevenue, totalPaid, totalPending < 0 ? 0 : totalPending,
+            topDiagnoses, dailyOpd, dailyRevenue));
+    }
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────
@@ -189,3 +257,21 @@ public record IpdCensusItem(
 );
 
 public record RevenueDayItem(string Date, decimal Amount, int Count);
+
+public record MonthlyReportDto(
+    int Year,
+    int Month,
+    int TotalOpd,
+    int TotalIpd,
+    int TotalEr,
+    decimal TotalRevenue,
+    decimal TotalPaid,
+    decimal TotalPending,
+    IEnumerable<TopDiagnosisDto> TopDiagnoses,
+    IEnumerable<DailyCountDto> DailyOpd,
+    IEnumerable<DailyAmountDto> DailyRevenue
+);
+
+public record TopDiagnosisDto(string Icd10Code, string Icd10Name, int Count);
+public record DailyCountDto(string Date, int Count);
+public record DailyAmountDto(string Date, decimal Amount);

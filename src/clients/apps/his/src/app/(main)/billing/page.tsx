@@ -39,6 +39,8 @@ export default function BillingPage() {
   const [payModalOpen, { open: openPayModal, close: closePayModal }] = useDisclosure(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const today = new Date().toISOString().split('T')[0];
+  const [exportDate, setExportDate] = useState(today);
 
   const { data: listData, isLoading, refetch } = useQuery({
     queryKey: ['billing', 'worklist'],
@@ -102,6 +104,20 @@ export default function BillingPage() {
     onError: (e: Error) => setErrorMsg(e.message),
   });
 
+  const handleExportCsv = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('his_token') : null;
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+    const res = await fetch(`${base}/api/billing/export?date=${exportDate}`, {
+      headers: { Authorization: token ? `Bearer ${token}` : '' },
+    });
+    if (!res.ok) { setErrorMsg('Export ล้มเหลว'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `billing_${exportDate}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handlePay = () => {
     if (!invoice) return;
     payMutation.mutate({ invoiceId: invoice.id, method: Number(paymentMethod), amount: Number(paidAmount) });
@@ -120,7 +136,15 @@ export default function BillingPage() {
     <Stack gap="md">
       <Group justify="space-between">
         <Title order={3}>งานการเงิน (Billing)</Title>
-        <Button variant="light" size="xs" onClick={() => refetch()}>รีเฟรช</Button>
+        <Group gap="xs">
+          <input
+            type="date" value={exportDate}
+            onChange={e => setExportDate(e.target.value)}
+            style={{ padding: '5px 8px', border: '1px solid #ced4da', borderRadius: 6, fontSize: 13 }}
+          />
+          <Button variant="light" color="teal" size="xs" onClick={handleExportCsv}>Export CSV</Button>
+          <Button variant="light" size="xs" onClick={() => refetch()}>รีเฟรช</Button>
+        </Group>
       </Group>
 
       {successMsg && <Alert color="green">{successMsg}</Alert>}

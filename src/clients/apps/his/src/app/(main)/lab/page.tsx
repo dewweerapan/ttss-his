@@ -150,7 +150,10 @@ export default function LabPage() {
                       <Button size="xs" color="green" onClick={() => handleOpenResult(order)}>บันทึกผล</Button>
                     )}
                     {order.status === 4 && (
-                      <Button size="xs" variant="light" onClick={() => { setSelected(order); openDetail(); }}>ดูผล</Button>
+                      <>
+                        <Button size="xs" variant="light" onClick={() => { setSelected(order); openDetail(); }}>ดูผล</Button>
+                        <Button size="xs" variant="subtle" component="a" href={`/print/lab-order/${order.id}`} target="_blank">พิมพ์</Button>
+                      </>
                     )}
                     {(order.status === 1 || order.status === 2) && (
                       <Button size="xs" color="red" variant="subtle" loading={cancelMutation.isPending}

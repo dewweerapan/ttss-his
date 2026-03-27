@@ -71,6 +71,9 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
     // Phase 8 — Appointments
     public DbSet<Appointment> Appointments { get; set; } = null!;
 
+    // Phase 11 — Audit Log
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

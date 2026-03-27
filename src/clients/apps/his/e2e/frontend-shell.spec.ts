@@ -1,0 +1,131 @@
+import { test, expect } from '@playwright/test';
+import { SEL, TEST_USERS } from './helpers/constants';
+import { loginViaAPI, loginViaUI } from './helpers/auth';
+
+/**
+ * ╔══════════════════════════════════════════════════════════╗
+ * ║  TEST SUITE: Frontend Shell & Navigation                ║
+ * ║  Phase: 1 — Core Foundation                             ║
+ * ║  Coverage: Sidebar, Navigation, Dashboard, AppShell     ║
+ * ╚══════════════════════════════════════════════════════════╝
+ *
+ * ใช้ loginViaAPI เพื่อ bypass login flow → focus ที่ shell behavior
+ */
+
+test.describe('SHELL-001: Dashboard after Login', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaAPI(page, 'doctor');
+    await page.goto('/dashboard');
+  });
+
+  test('should display dashboard title', async ({ page }) => {
+    await expect(page.locator(SEL.dashboardTitle)).toBeVisible();
+  });
+
+  test('should display welcome message with user name', async ({ page }) => {
+    await expect(page.locator(SEL.welcomeText)).toBeVisible();
+  });
+
+  test('should display all 6 module cards (REG, QUE, MAI, DPO, TPD, BIL)', async ({ page }) => {
+    const expectedModules = ['REG', 'QUE', 'MAI', 'DPO', 'TPD', 'BIL'];
+
+    for (const code of expectedModules) {
+      await expect(page.locator(`text=${code}`)).toBeVisible();
+    }
+  });
+
+  test('should display TTSS HIS in header', async ({ page }) => {
+    await expect(page.locator('h4:has-text("TTSS HIS")')).toBeVisible();
+  });
+});
+
+test.describe('SHELL-002: Sidebar Navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaAPI(page, 'nurse');
+    await page.goto('/dashboard');
+  });
+
+  test('should display all 7 nav items in sidebar', async ({ page }) => {
+    const navItems = Object.values(SEL.nav);
+    for (const selector of navItems) {
+      await expect(page.locator(selector).first()).toBeVisible();
+    }
+  });
+
+  test('should highlight active nav item based on current route', async ({ page }) => {
+    // Dashboard should be active by default
+    const dashboardNav = page.locator(SEL.nav.dashboard).first();
+    await expect(dashboardNav).toBeVisible();
+  });
+
+  test('should navigate to /registration when clicking REG nav item', async ({ page }) => {
+    await page.click(SEL.nav.registration);
+    await expect(page).toHaveURL('/registration');
+  });
+
+  test('should navigate to /queue when clicking QUE nav item', async ({ page }) => {
+    await page.click(SEL.nav.queue);
+    await expect(page).toHaveURL('/queue');
+  });
+
+  test('should navigate to /triage when clicking MAI nav item', async ({ page }) => {
+    await page.click(SEL.nav.triage);
+    await expect(page).toHaveURL('/triage');
+  });
+
+  test('should navigate to /doctor when clicking DPO nav item', async ({ page }) => {
+    await page.click(SEL.nav.doctor);
+    await expect(page).toHaveURL('/doctor');
+  });
+
+  test('should navigate to /pharmacy when clicking TPD nav item', async ({ page }) => {
+    await page.click(SEL.nav.pharmacy);
+    await expect(page).toHaveURL('/pharmacy');
+  });
+
+  test('should navigate to /billing when clicking BIL nav item', async ({ page }) => {
+    await page.click(SEL.nav.billing);
+    await expect(page).toHaveURL('/billing');
+  });
+});
+
+test.describe('SHELL-003: Logout Button in Header', () => {
+  test('should be visible in header', async ({ page }) => {
+    await loginViaAPI(page, 'finance');
+    await page.goto('/dashboard');
+
+    await expect(page.locator(SEL.logoutButton)).toBeVisible();
+  });
+
+  test('should clear session and redirect to sign-in', async ({ page }) => {
+    await loginViaUI(page, 'finance');
+
+    await page.click(SEL.logoutButton);
+    await expect(page).toHaveURL(/\/sign-in/);
+
+    // Verify localStorage is cleared
+    const token = await page.evaluate(() => localStorage.getItem('his_token'));
+    const user = await page.evaluate(() => localStorage.getItem('his_user'));
+    expect(token).toBeNull();
+    expect(user).toBeNull();
+  });
+});
+
+test.describe('SHELL-004: Multiple Role Dashboard Verification', () => {
+  const roleTests: Array<{ key: keyof typeof TEST_USERS; expectedRole: string }> = [
+    { key: 'doctor', expectedRole: 'Doctor' },
+    { key: 'nurse', expectedRole: 'Nurse' },
+    { key: 'pharmacist', expectedRole: 'Pharmacist' },
+    { key: 'finance', expectedRole: 'Finance' },
+  ];
+
+  for (const { key, expectedRole } of roleTests) {
+    test(`should display correct role for ${expectedRole}`, async ({ page }) => {
+      await loginViaAPI(page, key);
+      await page.goto('/dashboard');
+
+      // Welcome message should contain the role
+      await expect(page.locator(`text=${expectedRole}`)).toBeVisible({ timeout: 5_000 });
+    });
+  }
+});

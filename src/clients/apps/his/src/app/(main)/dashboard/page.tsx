@@ -1,9 +1,11 @@
 'use client';
+import '@mantine/charts/styles.css';
 import { useState } from 'react';
 import {
-  Badge, Button, Group, Paper, RingProgress, SimpleGrid, Stack,
+  Alert, Badge, Button, Group, Paper, RingProgress, SimpleGrid, Stack,
   Table, Text, Title,
 } from '@mantine/core';
+import { BarChart } from '@mantine/charts';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -64,6 +66,13 @@ export default function DashboardPage() {
     refetchInterval: 60000,
   });
 
+  type LowStockItem = { id: string; code: string; name: string; unit: string; stockQuantity: number; reorderLevel: number };
+  const { data: lowStock = [] } = useQuery({
+    queryKey: ['dashboard', 'low-stock'],
+    queryFn: () => api.get<LowStockItem[]>('/api/admin/stock/low'),
+    refetchInterval: 120000,
+  });
+
   const bedOccupancyPct = stats && stats.totalBeds > 0
     ? Math.round((stats.occupiedBeds / stats.totalBeds) * 100)
     : 0;
@@ -81,6 +90,18 @@ export default function DashboardPage() {
         </Stack>
         <Button variant="light" size="xs" onClick={() => refetchStats()}>รีเฟรช</Button>
       </Group>
+
+      {lowStock.length > 0 && (
+        <Alert color="orange" title={`⚠️ สินค้า/ยาใกล้หมดคลัง (${lowStock.length} รายการ) — กรุณาสั่งซื้อ`}>
+          <Group gap="xs" wrap="wrap">
+            {lowStock.map(p => (
+              <Badge key={p.id} color="orange" variant="outline" size="sm">
+                {p.code}: {p.stockQuantity}/{p.reorderLevel} {p.unit}
+              </Badge>
+            ))}
+          </Group>
+        </Alert>
+      )}
 
       {isLoading ? (
         <Text c="dimmed">กำลังโหลด...</Text>
@@ -168,28 +189,20 @@ export default function DashboardPage() {
             </Paper>
           )}
 
-          {/* Revenue 7 days */}
+          {/* Revenue 7 days — bar chart */}
           {revenue.length > 0 && (
             <Paper withBorder p="md">
-              <Text size="sm" fw={600} mb="sm">รายได้ 7 วันย้อนหลัง</Text>
-              <Table>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>วันที่</Table.Th>
-                    <Table.Th ta="right">ยอดรวม (฿)</Table.Th>
-                    <Table.Th ta="right">จำนวนใบเสร็จ</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {revenue.map(r => (
-                    <Table.Tr key={r.date}>
-                      <Table.Td>{new Date(r.date).toLocaleDateString('th-TH')}</Table.Td>
-                      <Table.Td ta="right" fw={600}>{r.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</Table.Td>
-                      <Table.Td ta="right">{r.count}</Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+              <Text size="sm" fw={600} mb="sm">รายได้ 7 วันย้อนหลัง (฿)</Text>
+              <BarChart
+                h={220}
+                data={revenue.map(r => ({
+                  date: new Date(r.date).toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }),
+                  'รายได้': r.amount,
+                }))}
+                dataKey="date"
+                series={[{ name: 'รายได้', color: 'teal.6' }]}
+                tickLine="y"
+              />
             </Paper>
           )}
 

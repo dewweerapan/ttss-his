@@ -161,6 +161,12 @@ export default function PharmacyPage() {
                         จ่ายยา
                       </Button>
                     )}
+                    {order.status === 3 && (
+                      <Button size="xs" variant="subtle" component="a"
+                        href={`/print/drug-label/${order.id}`} target="_blank">
+                        พิมพ์ฉลาก
+                      </Button>
+                    )}
                     {(order.status === 1 || order.status === 2) && (
                       <Button size="xs" variant="subtle" color="red"
                         loading={cancelMutation.isPending}

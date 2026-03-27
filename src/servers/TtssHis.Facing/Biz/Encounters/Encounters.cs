@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using TtssHis.Facing.Services;
 using TtssHis.Shared.DbContexts;
 using TtssHis.Shared.Entities.Encounter;
 using TtssHis.Shared.Entities.Medical;
@@ -13,7 +14,7 @@ namespace TtssHis.Facing.Biz.Encounters;
 [ApiController]
 [Route("api/encounters")]
 [Authorize]
-public sealed class Encounters(HisDbContext db) : ControllerBase
+public sealed class Encounters(HisDbContext db, IHisAuditService audit) : ControllerBase
 {
     // ── LIST ──────────────────────────────────────────────────────────────
     [HttpGet]
@@ -95,6 +96,7 @@ public sealed class Encounters(HisDbContext db) : ControllerBase
         db.QueueItems.Add(queueItem);
 
         await db.SaveChangesAsync();
+        await audit.LogAsync("CREATE_ENCOUNTER", "Encounter", encounter.Id, encounterNo);
         return CreatedAtAction(nameof(Get), new { id = encounter.Id }, await BuildDetail(encounter.Id));
     }
 
@@ -169,6 +171,7 @@ public sealed class Encounters(HisDbContext db) : ControllerBase
         encounter.UpdatedBy       = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         await db.SaveChangesAsync();
+        await audit.LogAsync("DISCHARGE", "Encounter", id);
         return NoContent();
     }
 
@@ -235,6 +238,13 @@ public sealed class Encounters(HisDbContext db) : ControllerBase
         return Ok(orders);
     }
 
+    // ── MED-CERT ──────────────────────────────────────────────────────────
+    [HttpPost("{id}/med-cert")]
+    public ActionResult<MedCertResponse> IssueMedCert(string id, [FromBody] MedCertRequest req)
+    {
+        return Ok(new MedCertResponse(id, req.Diagnosis, req.RestDays, req.DoctorName, req.Notes, DateTime.UtcNow));
+    }
+
     // ── PRIVATE HELPER ────────────────────────────────────────────────────
     private async Task<EncounterDetail?> BuildDetail(string id)
     {
@@ -254,7 +264,8 @@ public sealed class Encounters(HisDbContext db) : ControllerBase
             e.Id,
             e.EncounterNo,
             new PatientInfo(e.Patient!.Id, e.Patient.Hn, e.Patient.PreName,
-                e.Patient.FirstName, e.Patient.LastName, e.Patient.PhoneNumber, e.Patient.Birthdate),
+                e.Patient.FirstName, e.Patient.LastName, e.Patient.PhoneNumber, e.Patient.Birthdate,
+                e.Patient.Allergy, e.Patient.AllergyNote),
             e.Status,
             e.Type,
             e.DivisionId,
@@ -283,7 +294,7 @@ public record EncounterItem(
 public record EncounterListResponse(IEnumerable<EncounterItem> Items);
 
 public record PatientInfo(string Id, string Hn, string? PreName, string FirstName, string LastName,
-    string? PhoneNumber, DateOnly? Birthdate);
+    string? PhoneNumber, DateOnly? Birthdate, string? Allergy, string? AllergyNote);
 
 public record VitalSignInfo(decimal? Temperature, int? PulseRate, int? RespiratoryRate,
     int? BpSystolic, int? BpDiastolic, int? O2Sat, decimal? Weight, decimal? Height,
@@ -316,3 +327,6 @@ public record TriageRequest(string? ChiefComplaint, decimal? Temperature, int? P
 public record ConsultRequest(string DoctorId);
 
 public record AddDiagnosisRequest(string? Icd10Id, int? Type, string? Description, bool? IsConfirmed);
+
+public record MedCertRequest(string Diagnosis, int RestDays, string DoctorName, string? Notes);
+public record MedCertResponse(string EncounterId, string Diagnosis, int RestDays, string DoctorName, string? Notes, DateTime IssuedAt);

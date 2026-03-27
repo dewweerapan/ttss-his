@@ -1,0 +1,71 @@
+# BUG-AUTH-001: Login ด้วย empty fields ไม่แสดง error message
+
+**Date:** 2026-03-27
+**Reporter:** QA Engineer
+**Status:** 🐛 OPEN
+**Severity:** 🟡 Medium
+**Test Case:** AUTH-004-3
+**Spec File:** auth.spec.ts
+
+---
+
+## สิ่งที่เกิดขึ้น (Actual)
+
+เมื่อกดปุ่ม "เข้าสู่ระบบ" โดยไม่กรอก username/password → ระบบส่ง request ไป API → API return 400 Bad Request → แต่ frontend แสดงข้อความ "ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง" ซึ่งไม่ตรงกับ error จริง (ควรบอกว่ากรุณากรอกข้อมูล)
+
+## สิ่งที่ควรเกิด (Expected)
+
+Frontend ควรแสดง validation error ก่อนส่ง request เลย เช่น "กรุณากรอกชื่อผู้ใช้งาน" หรืออย่างน้อยควรแยก error message ระหว่าง "ไม่กรอก" กับ "กรอกผิด"
+
+## ขั้นตอน Reproduce
+
+1. เปิด http://localhost:3000/sign-in
+2. ไม่ต้องกรอกอะไร
+3. กดปุ่ม "เข้าสู่ระบบ"
+4. สังเกต error message ที่แสดง
+
+## Playwright Error Output
+
+```
+Error: locator.toBeVisible: Timeout 5000ms exceeded.
+Call log:
+  - waiting for locator('text=ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง')
+    or locator('text=ไม่สามารถเชื่อมต่อ server ได้')
+
+  3 |   test('should show error for empty credentials', async ({ page }) => {
+  4 |     await page.goto('/sign-in');
+> 5 |     await page.click(SEL.loginButton);
+  6 |
+  7 |     await expect(page.locator(SEL.loginError).or(page.locator(SEL.connectionError)))
+  8 |       .toBeVisible({ timeout: 5_000 });
+```
+
+## Screenshot / Trace (ถ้ามี)
+
+- screenshot: `test-results/auth-AUTH-004-Invalid-Credentials-should-show-error-for-empty-credentials/test-failed-1.png`
+- trace: `test-results/auth-AUTH-004-Invalid-Credentials-should-show-error-for-empty-credentials/trace.zip`
+
+วิธีเปิด trace:
+```bash
+npx playwright show-trace "test-results/auth-AUTH-004-Invalid-Credentials-should-show-error-for-empty-credentials/trace.zip"
+```
+
+## Environment
+
+- OS: macOS 15.3
+- Node: v22.11.0
+- Playwright: v1.50.1
+- Browser: Chromium
+- API URL: http://localhost:5150
+- Frontend URL: http://localhost:3000
+
+---
+
+## สำหรับ Dev (กรอกเมื่อแก้เสร็จ)
+
+**Status:** ✅ FIXED
+**Fixed by:** Dev A
+**Commit:** `a1b2c3d`
+**Branch:** `fix/auth-empty-validation`
+**Root Cause:** Frontend ไม่มี client-side validation ก่อนส่ง request — API return 400 แต่ frontend handle เฉพาะ 401 กับ network error เท่านั้น แก้โดยเพิ่ม validation ที่ `handleLogin()` ก่อน fetch
+**Verified by QA:** ✅ verified — 2026-03-28

@@ -102,11 +102,68 @@ public sealed class AdminController(HisDbContext db) : ControllerBase
             .OrderBy(p => p.Code)
             .Select(p => new ProductAdminDto(
                 p.Id, p.Code, p.Name, p.Type, p.Unit ?? string.Empty, p.IsActive,
-                p.Pricings.Where(pr => pr.IsActive).Select(pr => pr.PriceNormal).FirstOrDefault()
+                p.Pricings.Where(pr => pr.IsActive).Select(pr => pr.PriceNormal).FirstOrDefault(),
+                p.StockQuantity, p.ReorderLevel
             ))
             .ToList();
 
         return Ok(products);
+    }
+
+    /// <summary>GET /api/admin/stock/low — products at or below reorder level</summary>
+    [HttpGet("api/admin/stock/low")]
+    public ActionResult<IEnumerable<ProductAdminDto>> LowStock()
+    {
+        var items = db.Products
+            .Include(p => p.Pricings)
+            .Where(p => p.DeletedDate == null && p.IsActive && p.StockQuantity <= p.ReorderLevel)
+            .OrderBy(p => p.StockQuantity)
+            .Select(p => new ProductAdminDto(
+                p.Id, p.Code, p.Name, p.Type, p.Unit ?? string.Empty, p.IsActive,
+                p.Pricings.Where(pr => pr.IsActive).Select(pr => pr.PriceNormal).FirstOrDefault(),
+                p.StockQuantity, p.ReorderLevel
+            ))
+            .ToList();
+
+        return Ok(items);
+    }
+
+    /// <summary>POST /api/admin/stock/receive — bulk receive stock from supplier</summary>
+    [HttpPost("api/admin/stock/receive")]
+    public async Task<IActionResult> ReceiveStock([FromBody] ReceiveStockRequest req)
+    {
+        foreach (var line in req.Lines)
+        {
+            var product = await db.Products.FirstOrDefaultAsync(p => p.Id == line.ProductId && p.DeletedDate == null);
+            if (product is null) continue;
+            product.StockQuantity += line.Quantity;
+        }
+        await db.SaveChangesAsync();
+        return Ok(new { message = $"รับสินค้า {req.Lines.Count} รายการสำเร็จ" });
+    }
+
+    /// <summary>PATCH /api/admin/products/{id}/stock — adjust stock quantity</summary>
+    [HttpPatch("api/admin/products/{id}/stock")]
+    public async Task<ActionResult<ProductAdminDto>> AdjustStock(string id, [FromBody] AdjustStockRequest req)
+    {
+        var product = await db.Products
+            .Include(p => p.Pricings)
+            .FirstOrDefaultAsync(p => p.Id == id && p.DeletedDate == null);
+        if (product is null) return NotFound();
+
+        if (req.Mode == "set")
+            product.StockQuantity = Math.Max(0, req.Quantity);
+        else
+            product.StockQuantity = Math.Max(0, product.StockQuantity + req.Quantity);
+
+        if (req.ReorderLevel.HasValue)
+            product.ReorderLevel = req.ReorderLevel.Value;
+
+        await db.SaveChangesAsync();
+
+        var price = product.Pricings.FirstOrDefault(pr => pr.IsActive)?.PriceNormal ?? 0;
+        return Ok(new ProductAdminDto(product.Id, product.Code, product.Name, product.Type,
+            product.Unit ?? string.Empty, product.IsActive, price, product.StockQuantity, product.ReorderLevel));
     }
 
     /// <summary>POST /api/admin/products — create product + pricing</summary>
@@ -145,7 +202,7 @@ public sealed class AdminController(HisDbContext db) : ControllerBase
         db.Pricings.Add(pricing);
         await db.SaveChangesAsync();
 
-        return Ok(new ProductAdminDto(product.Id, product.Code, product.Name, product.Type, product.Unit ?? string.Empty, product.IsActive, req.Price));
+        return Ok(new ProductAdminDto(product.Id, product.Code, product.Name, product.Type, product.Unit ?? string.Empty, product.IsActive, req.Price, 0, 10));
     }
 
     /// <summary>PATCH /api/admin/products/{id} — update product + price</summary>
@@ -237,6 +294,38 @@ public sealed class AdminController(HisDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         return NoContent();
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // AUDIT LOGS
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>GET /api/admin/audit-logs?page=1&pageSize=50&action=&userId=</summary>
+    [HttpGet("api/admin/audit-logs")]
+    public ActionResult<AuditLogPageResult> GetAuditLogs(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? action = null,
+        [FromQuery] string? userId = null)
+    {
+        var query = db.AuditLogs.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(action))
+            query = query.Where(a => a.Action.Contains(action));
+        if (!string.IsNullOrWhiteSpace(userId))
+            query = query.Where(a => a.UserId == userId);
+
+        var total = query.Count();
+        var items = query
+            .OrderByDescending(a => a.CreatedDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(a => new AuditLogDto(
+                a.Id, a.Action, a.EntityType, a.EntityId,
+                a.UserId, a.Username, a.Detail, a.CreatedDate, a.IpAddress))
+            .ToList();
+
+        return Ok(new AuditLogPageResult(items, total));
+    }
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────
@@ -244,10 +333,18 @@ public record UserDto(string Id, string Username, string FirstName, string LastN
 public record CreateUserRequest(string Username, string Password, string FirstName, string LastName, string RoleId);
 public record UpdateUserRequest(string FirstName, string LastName, string RoleId, bool IsActive, string? NewPassword);
 
-public record ProductAdminDto(string Id, string Code, string Name, int Type, string Unit, bool IsActive, decimal Price);
+public record ProductAdminDto(string Id, string Code, string Name, int Type, string Unit, bool IsActive, decimal Price, int StockQuantity, int ReorderLevel);
 public record CreateProductRequest(string Code, string Name, int Type, string Unit, bool IsBillable, decimal Price);
 public record UpdateProductRequest(string Name, string Unit, bool IsActive, decimal Price);
+public record AdjustStockRequest(int Quantity, string Mode, int? ReorderLevel); // Mode: "add" | "set"
+public record ReceiveStockLine(string ProductId, int Quantity);
+public record ReceiveStockRequest(List<ReceiveStockLine> Lines, string? Supplier, string? Notes);
 
 public record DivisionDto(string Id, string Code, string Name, int Type, bool IsActive);
 public record CreateDivisionRequest(string Code, string Name, int Type);
 public record UpdateDivisionRequest(string Name, int Type, bool IsActive);
+
+public record AuditLogDto(
+    string Id, string Action, string? EntityType, string? EntityId,
+    string? UserId, string? Username, string? Detail, DateTime CreatedDate, string? IpAddress);
+public record AuditLogPageResult(IEnumerable<AuditLogDto> Items, int Total);

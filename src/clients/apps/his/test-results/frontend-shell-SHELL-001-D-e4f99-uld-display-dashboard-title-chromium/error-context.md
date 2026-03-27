@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - heading "TTSS HIS" [level=4] [ref=e6]
+        - paragraph [ref=e7] [cursor=pointer]: ออกจากระบบ
+    - navigation [ref=e8]:
+      - generic [ref=e10] [cursor=pointer]: Dashboard
+      - generic [ref=e12] [cursor=pointer]: ทะเบียนผู้ป่วย (REG)
+      - generic [ref=e14] [cursor=pointer]: คิว (QUE)
+      - generic [ref=e16] [cursor=pointer]: Triage (MAI)
+      - generic [ref=e18] [cursor=pointer]: ตรวจ OPD (DPO)
+      - generic [ref=e20] [cursor=pointer]: เภสัช (TPD)
+      - generic [ref=e22] [cursor=pointer]: การเงิน (BIL)
+    - main [ref=e23]:
+      - generic [ref=e24]:
+        - heading "Dashboard" [level=3] [ref=e25]
+        - paragraph [ref=e26]: ยินดีต้อนรับ สมชาย ใจดี (role-doctor)
+        - generic [ref=e28]:
+          - generic [ref=e30]:
+            - paragraph [ref=e31]: REG
+            - paragraph [ref=e32]: ทะเบียนผู้ป่วย
+          - generic [ref=e34]:
+            - paragraph [ref=e35]: QUE
+            - paragraph [ref=e36]: คิวรอตรวจ
+          - generic [ref=e38]:
+            - paragraph [ref=e39]: MAI
+            - paragraph [ref=e40]: Triage
+          - generic [ref=e42]:
+            - paragraph [ref=e43]: DPO
+            - paragraph [ref=e44]: ตรวจ OPD
+          - generic [ref=e46]:
+            - paragraph [ref=e47]: TPD
+            - paragraph [ref=e48]: จ่ายยา
+          - generic [ref=e50]:
+            - paragraph [ref=e51]: BIL
+            - paragraph [ref=e52]: การเงิน
+  - alert [ref=e53]
+```

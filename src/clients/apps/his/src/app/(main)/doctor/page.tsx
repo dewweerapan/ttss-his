@@ -24,7 +24,7 @@ type DrugOrderLineItem = { id: string; productName: string; quantity: number; fr
 type DrugOrderSummary = { id: string; orderNo: string; status: number; orderDate: string; items: DrugOrderLineItem[]; };
 type EncounterDetail = {
   id: string; encounterNo: string; status: number; chiefComplaint?: string;
-  doctorId?: string; patient: { id: string; hn: string; preName?: string; firstName: string; lastName: string; birthdate?: string; phoneNumber?: string; };
+  doctorId?: string; patient: { id: string; hn: string; preName?: string; firstName: string; lastName: string; birthdate?: string; phoneNumber?: string; allergy?: string; allergyNote?: string; };
   latestVitals?: VitalSignInfo;
   queueItem?: { id: string; queueNo: string; status: number; };
   diagnoses: DiagnosisInfo[];
@@ -217,6 +217,14 @@ export default function DoctorPage() {
             {successMsg && <Alert color="green" onClose={() => setSuccessMsg('')} withCloseButton>{successMsg}</Alert>}
             {errorMsg && <Alert color="red" onClose={() => setErrorMsg('')} withCloseButton>{errorMsg}</Alert>}
 
+            {/* Allergy alert */}
+            {detail?.patient.allergy && (
+              <Alert color="red" title="⚠️ แพ้ยา / แพ้สาร" variant="filled">
+                <Text fw={700} size="sm">{detail.patient.allergy}</Text>
+                {detail.patient.allergyNote && <Text size="xs">{detail.patient.allergyNote}</Text>}
+              </Alert>
+            )}
+
             {/* Patient header */}
             {detail && (
               <Paper withBorder p="sm">
@@ -225,14 +233,25 @@ export default function DoctorPage() {
                     <Text fw={700}>{(detail.patient.preName ?? '') + detail.patient.firstName + ' ' + detail.patient.lastName}</Text>
                     <Text size="sm" c="dimmed">HN: {detail.patient.hn} | VN: {detail.encounterNo}</Text>
                   </Stack>
-                  <Select
-                    placeholder="กำหนดแพทย์"
-                    data={doctorOptions}
-                    value={detail.doctorId ?? null}
-                    onChange={(v) => v && consultMutation.mutate(v)}
-                    size="sm"
-                    style={{ minWidth: 200 }}
-                  />
+                  <Group gap="xs" wrap="nowrap">
+                    <Select
+                      placeholder="กำหนดแพทย์"
+                      data={doctorOptions}
+                      value={detail.doctorId ?? null}
+                      onChange={(v) => v && consultMutation.mutate(v)}
+                      size="sm"
+                      style={{ minWidth: 180 }}
+                    />
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      component="a"
+                      href={`/print/encounter/${selectedId}`}
+                      target="_blank"
+                    >
+                      พิมพ์สรุป
+                    </Button>
+                  </Group>
                 </Group>
               </Paper>
             )}

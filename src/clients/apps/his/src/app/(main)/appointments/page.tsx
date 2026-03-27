@@ -91,6 +91,23 @@ export default function AppointmentsPage() {
     onError: (e: Error) => setErrorMsg(e.message),
   });
 
+  const checkInMutation = useMutation({
+    mutationFn: async (a: Appointment) => {
+      const enc = await api.post<{ encounterNo: string; queueItem?: { queueNo: string } }>(
+        '/api/encounters', { patientId: a.patientId, divisionId: a.divisionId, type: 1 }
+      );
+      await api.patch(`/api/appointments/${a.id}/status`, { status: 3, reason: null });
+      return enc;
+    },
+    onSuccess: (data) => {
+      setSuccessMsg(`Check-in สำเร็จ — VN: ${data.encounterNo}  คิว: ${data.queueItem?.queueNo ?? '-'}`);
+      setErrorMsg('');
+      qc.invalidateQueries({ queryKey: ['appointments'] });
+      qc.invalidateQueries({ queryKey: ['encounters'] });
+    },
+    onError: (e: Error) => setErrorMsg(e.message),
+  });
+
   const openNew = () => {
     setSelectedPatient(null); setPatientSearch(''); setApptDate(today);
     setTimeSlot('1'); setApptType('1'); setSelectedDoctorId(null);
@@ -158,7 +175,7 @@ export default function AppointmentsPage() {
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs">
-                    {a.status === 1 && <Button size="xs" color="teal" loading={updateStatusMutation.isPending} onClick={() => updateStatusMutation.mutate({ id: a.id, status: 3 })}>มาถึง</Button>}
+                    {a.status === 1 && <Button size="xs" color="teal" loading={checkInMutation.isPending} onClick={() => checkInMutation.mutate(a)}>มาถึง + สร้าง Visit</Button>}
                     {a.status === 3 && <Button size="xs" color="green" loading={updateStatusMutation.isPending} onClick={() => updateStatusMutation.mutate({ id: a.id, status: 4 })}>เสร็จ</Button>}
                     {(a.status === 1 || a.status === 2) && <Button size="xs" color="red" variant="subtle" loading={updateStatusMutation.isPending} onClick={() => updateStatusMutation.mutate({ id: a.id, status: 9 })}>ยกเลิก</Button>}
                   </Group>

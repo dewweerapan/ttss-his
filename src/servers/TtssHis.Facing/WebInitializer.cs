@@ -38,5 +38,7 @@ public sealed class WebInitializer(IConfiguration configuration)
 
         services.AddAuthorization();
         services.AddScoped<JwtTokenService>();
+        services.AddHttpContextAccessor();
+        services.AddScoped<IHisAuditService, HisAuditService>();
     }
 }

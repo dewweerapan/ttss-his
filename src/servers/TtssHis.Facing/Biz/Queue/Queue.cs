@@ -1,7 +1,9 @@
 // src/servers/TtssHis.Facing/Biz/Queue/Queue.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using TtssHis.Facing.Hubs;
 using TtssHis.Shared.DbContexts;
 
 namespace TtssHis.Facing.Biz.Queue;
@@ -9,8 +11,37 @@ namespace TtssHis.Facing.Biz.Queue;
 [ApiController]
 [Route("api/queue")]
 [Authorize]
-public sealed class Queue(HisDbContext db) : ControllerBase
+public sealed class Queue(HisDbContext db, IHubContext<QueueHub> hub) : ControllerBase
 {
+    // ── PUBLIC DISPLAY (no auth) ───────────────────────────────────────────
+    /// <summary>Public queue summary for display boards — no PII</summary>
+    [HttpGet("display")]
+    [AllowAnonymous]
+    public ActionResult<QueueDisplayResponse> Display(
+        [FromQuery] string divisionId = "div-opd",
+        [FromQuery] string? date = null)
+    {
+        var targetDate = date is not null
+            ? DateOnly.Parse(date)
+            : DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var items = db.QueueItems
+            .Where(q => q.DivisionId == divisionId
+                && DateOnly.FromDateTime(q.CreatedDate) == targetDate)
+            .OrderBy(q => q.QueueNo)
+            .Select(q => new QueueDisplayItem(q.Id, q.QueueNo, q.Status))
+            .ToList();
+
+        var summary = new QueueSummary(
+            items.Count(i => i.Status == 1),
+            items.Count(i => i.Status == 2),
+            items.Count(i => i.Status == 3),
+            items.Count(i => i.Status == 4)
+        );
+
+        return Ok(new QueueDisplayResponse(items, summary));
+    }
+
     // ── LIST ──────────────────────────────────────────────────────────────
     /// <summary>Get today's queue for a division</summary>
     [HttpGet]
@@ -66,6 +97,7 @@ public sealed class Queue(HisDbContext db) : ControllerBase
         item.Status   = 2; // CALLED
         item.CalledAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+        await hub.Clients.Group(item.DivisionId).SendAsync("QueueUpdated", item.DivisionId);
 
         return Ok(ToDto(item));
     }
@@ -84,6 +116,7 @@ public sealed class Queue(HisDbContext db) : ControllerBase
         item.Status   = 3; // SERVING
         item.ServedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+        await hub.Clients.Group(item.DivisionId).SendAsync("QueueUpdated", item.DivisionId);
 
         return Ok(ToDto(item));
     }
@@ -102,6 +135,7 @@ public sealed class Queue(HisDbContext db) : ControllerBase
         item.Status = 4; // DONE
         item.DoneAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+        await hub.Clients.Group(item.DivisionId).SendAsync("QueueUpdated", item.DivisionId);
 
         return Ok(ToDto(item));
     }
@@ -119,6 +153,7 @@ public sealed class Queue(HisDbContext db) : ControllerBase
 
         item.Status = 5; // SKIPPED
         await db.SaveChangesAsync();
+        await hub.Clients.Group(item.DivisionId).SendAsync("QueueUpdated", item.DivisionId);
 
         return Ok(ToDto(item));
     }
@@ -142,3 +177,5 @@ public record QueueItemDto(
 
 public record QueueSummary(int Waiting, int Called, int Serving, int Done);
 public record QueueListResponse(IEnumerable<QueueItemDto> Items, QueueSummary Summary);
+public record QueueDisplayItem(string Id, string QueueNo, int Status);
+public record QueueDisplayResponse(IEnumerable<QueueDisplayItem> Items, QueueSummary Summary);

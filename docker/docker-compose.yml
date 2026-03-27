@@ -47,11 +47,14 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   his-app:
     build:
       context: ../src/clients/apps/his
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
     env_file: env/his-app.env
     ports:
       - "3000:3000"

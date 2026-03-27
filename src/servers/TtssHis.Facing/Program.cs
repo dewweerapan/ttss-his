@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
 using TtssHis.Facing;
+using TtssHis.Facing.Hubs;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,6 +49,7 @@ builder.Services.AddHealthChecks()
     .AddNpgSql(defaultConnection, name: "database", tags: ["ready"]);
 
 new WebInitializer(builder.Configuration).RegisterServices(builder.Services);
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -62,6 +64,7 @@ app.UseCors("AllowedOrigins");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<QueueHub>("/hubs/queue");
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") });
 app.MapGet("/", () => $"{Assembly.GetExecutingAssembly().GetName().Name} (Mode: {app.Environment.EnvironmentName})").ExcludeFromDescription();

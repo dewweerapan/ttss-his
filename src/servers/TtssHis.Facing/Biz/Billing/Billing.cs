@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TtssHis.Facing.Services;
 using TtssHis.Shared.DbContexts;
 using TtssHis.Shared.Entities.Billing;
 
@@ -9,7 +10,7 @@ namespace TtssHis.Facing.Biz.Billing;
 
 [ApiController]
 [Authorize]
-public sealed class Billing(HisDbContext db) : ControllerBase
+public sealed class Billing(HisDbContext db, IHisAuditService audit) : ControllerBase
 {
     // ── BILLING WORKLIST ──────────────────────────────────────────────────
     /// <summary>GET /api/billing — today's encounters for billing</summary>
@@ -179,8 +180,58 @@ public sealed class Billing(HisDbContext db) : ControllerBase
         invoice.PaidAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+        await audit.LogAsync("PAY_INVOICE", "Invoice", id, $"Amount: {req.Amount}");
 
         return Ok(new ReceiptDto(receipt.Id, receipt.ReceiptNo, receipt.PaymentMethod, receipt.Amount, receipt.PaidAt));
+    }
+
+    // ── CSV EXPORT ────────────────────────────────────────────────────────
+    /// <summary>GET /api/billing/export?date=yyyy-MM-dd — download CSV</summary>
+    [HttpGet("api/billing/export")]
+    public IActionResult ExportCsv([FromQuery] string? date = null)
+    {
+        var targetDate = date is not null
+            ? DateOnly.Parse(date)
+            : DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var rows = db.Encounters
+            .Where(e => e.IsActive && e.DeletedDate == null
+                && DateOnly.FromDateTime(e.AdmissionDate) == targetDate)
+            .Select(e => new
+            {
+                EncounterNo  = e.EncounterNo,
+                Hn           = e.Patient!.Hn,
+                PatientName  = (e.Patient.PreName ?? "") + e.Patient.FirstName + " " + e.Patient.LastName,
+                AdmissionDate = e.AdmissionDate,
+                InvoiceNo    = e.Invoice != null ? e.Invoice.InvoiceNo : "",
+                InvoiceStatus = e.Invoice != null ? e.Invoice.Status : (int?)null,
+                TotalAmount  = e.Invoice != null ? e.Invoice.TotalAmount : (decimal?)null,
+                PaidAt       = e.Invoice != null ? e.Invoice.PaidAt : (DateTime?)null,
+            })
+            .OrderBy(e => e.AdmissionDate)
+            .ToList();
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("EncounterNo,HN,ชื่อ-สกุล,วันเวลา,เลขใบแจ้งหนี้,สถานะ,ยอดรวม,ชำระเมื่อ");
+        foreach (var r in rows)
+        {
+            var statusLabel = r.InvoiceStatus switch { 1 => "รอชำระ", 2 => "ชำระแล้ว", 9 => "ยกเลิก", _ => "-" };
+            sb.AppendLine(string.Join(",",
+                r.EncounterNo,
+                r.Hn,
+                $"\"{r.PatientName}\"",
+                r.AdmissionDate.ToString("yyyy-MM-dd HH:mm"),
+                r.InvoiceNo,
+                statusLabel,
+                r.TotalAmount?.ToString("F2") ?? "",
+                r.PaidAt?.ToString("yyyy-MM-dd HH:mm") ?? ""
+            ));
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(
+            System.Text.Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
+        var filename = $"billing_{targetDate:yyyyMMdd}.csv";
+        return File(bytes, "text/csv; charset=utf-8", filename);
     }
 
     // ── CANCEL INVOICE ────────────────────────────────────────────────────

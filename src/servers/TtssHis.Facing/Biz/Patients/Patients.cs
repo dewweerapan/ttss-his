@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TtssHis.Shared.DbContexts;
 
 namespace TtssHis.Facing.Biz.Patients;
@@ -46,16 +47,10 @@ public sealed class Patients(HisDbContext db) : ControllerBase
     {
         var p = db.Patients
             .Where(p => p.Id == id && p.DeletedDate == null)
-            .Select(p => new PatientDetail(
-                p.Id, p.Hn, p.PreName, p.FirstName, p.LastName,
-                p.PreNameEn, p.FirstNameEn, p.LastNameEn,
-                p.Gender, p.Birthdate, p.CitizenType, p.CitizenNo,
-                p.BloodGroup, p.NationalityCode, p.PhoneNumber,
-                p.IsAlive, p.CreatedDate))
             .FirstOrDefault();
 
         if (p is null) return NotFound();
-        return Ok(p);
+        return Ok(ToDetail(p));
     }
 
     [HttpPost]
@@ -93,13 +88,31 @@ public sealed class Patients(HisDbContext db) : ControllerBase
         db.Patients.Add(patient);
         await db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(Get), new { id = patient.Id },
-            new PatientDetail(patient.Id, patient.Hn, patient.PreName, patient.FirstName, patient.LastName,
-                patient.PreNameEn, patient.FirstNameEn, patient.LastNameEn,
-                patient.Gender, patient.Birthdate, patient.CitizenType, patient.CitizenNo,
-                patient.BloodGroup, patient.NationalityCode, patient.PhoneNumber,
-                patient.IsAlive, patient.CreatedDate));
+        return CreatedAtAction(nameof(Get), new { id = patient.Id }, ToDetail(patient));
     }
+
+    // ── UPDATE ALLERGY ─────────────────────────────────────────────────────
+    [HttpPatch("{id}/allergy")]
+    public async Task<ActionResult<PatientDetail>> UpdateAllergy(string id, [FromBody] UpdateAllergyRequest req)
+    {
+        var patient = await db.Patients.FirstOrDefaultAsync(p => p.Id == id && p.DeletedDate == null);
+        if (patient is null) return NotFound();
+
+        patient.Allergy      = req.Allergy;
+        patient.AllergyNote  = req.AllergyNote;
+        patient.LastUpdatedDate = DateTime.UtcNow;
+        patient.UpdatedBy    = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        await db.SaveChangesAsync();
+        return Ok(ToDetail(patient));
+    }
+
+    private static PatientDetail ToDetail(Shared.Entities.Patient.Patient p) =>
+        new(p.Id, p.Hn, p.PreName, p.FirstName, p.LastName,
+            p.PreNameEn, p.FirstNameEn, p.LastNameEn,
+            p.Gender, p.Birthdate, p.CitizenType, p.CitizenNo,
+            p.BloodGroup, p.NationalityCode, p.PhoneNumber,
+            p.IsAlive, p.CreatedDate, p.Allergy, p.AllergyNote);
 }
 
 public record PatientSummary(string Id, string Hn, string? PreName, string FirstName, string LastName,
@@ -109,7 +122,8 @@ public record PatientDetail(string Id, string Hn, string? PreName, string FirstN
     string? PreNameEn, string? FirstNameEn, string? LastNameEn,
     int Gender, DateOnly? Birthdate, string CitizenType, string? CitizenNo,
     string? BloodGroup, string NationalityCode, string? PhoneNumber,
-    bool IsAlive, DateTime CreatedDate);
+    bool IsAlive, DateTime CreatedDate,
+    string? Allergy, string? AllergyNote);
 
 public record PatientListResponse(IEnumerable<PatientSummary> Items, int Total, int PageNo, int PageSize);
 
@@ -120,3 +134,5 @@ public record CreatePatientRequest(
     string? CitizenType, string? CitizenNo, string? PassportNo,
     string? BloodGroup, string? NationalityCode,
     string? PhoneNumber);
+
+public record UpdateAllergyRequest(string? Allergy, string? AllergyNote);

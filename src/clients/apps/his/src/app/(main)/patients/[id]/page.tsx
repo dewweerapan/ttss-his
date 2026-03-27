@@ -1,10 +1,12 @@
 // src/clients/apps/his/src/app/(main)/patients/[id]/page.tsx
 'use client';
+import '@mantine/charts/styles.css';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  Badge, Button, Divider, Group, Paper, Stack,
+  Badge, Button, Group, Paper, Stack,
   Table, Tabs, Text, Title,
 } from '@mantine/core';
+import { LineChart } from '@mantine/charts';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -58,6 +60,21 @@ export default function PatientHistoryPage() {
   if (isLoading) return <Text>กำลังโหลดประวัติผู้ป่วย...</Text>;
   if (error || !data) return <Text c="red">ไม่พบข้อมูลผู้ป่วย</Text>;
 
+  // Flatten all vitals across encounters for the trend chart
+  const allVitals = data.encounters
+    .flatMap(enc => enc.vitalSigns)
+    .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+
+  const vitalChartData = allVitals
+    .filter(v => v.bpSystolic || v.heartRate || v.temperature)
+    .map(v => ({
+      date: new Date(v.recordedAt).toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }),
+      'SBP': v.bpSystolic ?? null,
+      'DBP': v.bpDiastolic ?? null,
+      'HR': v.heartRate ?? null,
+      'Temp': v.temperature ?? null,
+    }));
+
   return (
     <Stack gap="md">
       <Group>
@@ -78,6 +95,27 @@ export default function PatientHistoryPage() {
           <Badge size="lg" variant="light">{data.totalEncounters} ครั้ง</Badge>
         </Group>
       </Paper>
+
+      {/* Vital Signs Trend Chart */}
+      {vitalChartData.length >= 2 && (
+        <Paper withBorder p="md">
+          <Text size="sm" fw={600} mb="sm">แนวโน้ม Vital Signs</Text>
+          <LineChart
+            h={200}
+            data={vitalChartData}
+            dataKey="date"
+            series={[
+              { name: 'SBP', color: 'red.6', label: 'ความดัน Systolic' },
+              { name: 'DBP', color: 'pink.5', label: 'ความดัน Diastolic' },
+              { name: 'HR', color: 'blue.6', label: 'ชีพจร' },
+              { name: 'Temp', color: 'orange.5', label: 'อุณหภูมิ' },
+            ]}
+            connectNulls
+            withLegend
+            legendProps={{ verticalAlign: 'bottom' }}
+          />
+        </Paper>
+      )}
 
       {/* Encounter Timeline */}
       {data.encounters.length === 0 ? (
