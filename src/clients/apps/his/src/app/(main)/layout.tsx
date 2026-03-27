@@ -17,6 +17,7 @@ const navItems = [
   { label: 'IPD Chart', href: '/ipd-chart' },
   { label: 'ห้องฉุกเฉิน (ER)', href: '/er' },
   { label: 'ห้องปฏิบัติการ (LAB)', href: '/lab' },
+  { label: 'นัดหมาย (APP)', href: '/appointments' },
   { label: 'Admin', href: '/admin' },
 ];
 
