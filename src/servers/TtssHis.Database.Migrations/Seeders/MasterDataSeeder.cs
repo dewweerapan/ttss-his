@@ -2,6 +2,7 @@ using TtssHis.Shared.Constants;
 using TtssHis.Shared.DbContexts;
 using TtssHis.Shared.Entities.Core;
 using TtssHis.Shared.Entities.Insurance;
+using TtssHis.Shared.Entities.Product;
 
 namespace TtssHis.Database.Migrations.Seeders;
 
@@ -13,6 +14,7 @@ public static class MasterDataSeeder
         await SeedDoctorsAsync(db);
         await SeedUsersAsync(db);
         await SeedCoveragesAsync(db);
+        await SeedProductsAsync(db);
         await db.SaveChangesAsync();
         Console.WriteLine("Master data seeded.");
     }
@@ -60,6 +62,66 @@ public static class MasterDataSeeder
             new User { Id = "user-finance-001", Username = "finance1", PasswordHash = BCrypt.Net.BCrypt.HashPassword("finance1234"), FirstName = "มานะ", LastName = "การเงิน", RoleId = RoleConstants.RoleId.Finance, IsActive = true, CreatedDate = DateTime.UtcNow },
         };
         await db.Users.AddRangeAsync(users);
+    }
+
+    private static async Task SeedProductsAsync(HisDbContext db)
+    {
+        if (db.Products.Any()) return;
+
+        var now = DateTime.UtcNow;
+        var effective = new DateOnly(2026, 1, 1);
+
+        var items = new[]
+        {
+            ("prod-pcm500",  "PCM500",  "พาราเซตามอล 500mg",        1, "เม็ด",     2.00m),
+            ("prod-amx500",  "AMX500",  "อะม็อกซีซิลิน 500mg",       1, "แคปซูล",  5.00m),
+            ("prod-ibu400",  "IBU400",  "ไอบูโพรเฟน 400mg",          1, "เม็ด",     4.00m),
+            ("prod-ome20",   "OME20",   "โอมีพราโซล 20mg",           1, "แคปซูล",  8.00m),
+            ("prod-atr10",   "ATR10",   "อะทอร์วาสแตติน 10mg",       1, "เม็ด",     6.00m),
+            ("prod-met500",  "MET500",  "เมทฟอร์มิน 500mg",          1, "เม็ด",     3.00m),
+            ("prod-aml5",    "AML5",    "แอมโลดิพีน 5mg",            1, "เม็ด",     5.00m),
+            ("prod-enl5",    "ENL5",    "อีนาลาพริล 5mg",            1, "เม็ด",     4.00m),
+            ("prod-cpm4",    "CPM4",    "คลอร์เฟนิรามีน 4mg",        1, "เม็ด",     1.50m),
+            ("prod-dxm15",   "DXM15",   "เดกซ์โทรเมทอร์แฟน 15mg",   1, "เม็ด",     2.00m),
+            ("prod-asa81",   "ASA81",   "แอสไพริน 81mg",             1, "เม็ด",     1.00m),
+            ("prod-sim20",   "SIM20",   "ซิมวาสแตติน 20mg",          1, "เม็ด",     5.00m),
+            ("prod-mnz200",  "MNZ200",  "เมโทรนิดาโซล 200mg",        1, "เม็ด",     3.00m),
+            ("prod-cex500",  "CEX500",  "เซฟาเล็กซิน 500mg",         1, "แคปซูล",  7.00m),
+            ("prod-prd5",    "PRD5",    "เพรดนิโซโลน 5mg",           1, "เม็ด",     3.00m),
+            ("prod-lop2",    "LOP2",    "โลเปอราไมด์ 2mg",           1, "แคปซูล",  4.00m),
+            ("prod-ant",     "ANT5",    "แอนตาซิดผสม",               1, "ช้อนชา",  2.00m),
+            ("prod-vitc",    "VIT_C",   "วิตามินซี 500mg",            1, "เม็ด",     1.50m),
+            ("prod-zncox",   "ZNC_OX",  "สังกะสีออกไซด์ครีม",         1, "หลอด",   25.00m),
+            ("prod-opd-fee", "OPD_FEE", "ค่าตรวจ OPD",               2, "ครั้ง",  150.00m),
+        };
+
+        foreach (var (id, code, name, type, unit, price) in items)
+        {
+            await db.Products.AddAsync(new Product
+            {
+                Id          = id,
+                Code        = code,
+                Name        = name,
+                Type        = type,
+                Unit        = unit,
+                IsBillable  = true,
+                IsActive    = true,
+                CreatedDate = now,
+            });
+
+            await db.Pricings.AddAsync(new Pricing
+            {
+                Id            = $"price-{id}",
+                ProductId     = id,
+                CoverageId    = null,
+                PriceNormal   = price,
+                PriceSpecial  = price,
+                PriceForeign  = price * 2,
+                EffectiveDate = effective,
+                IsActive      = true,
+                CreatedDate   = now,
+            });
+        }
     }
 
     private static async Task SeedCoveragesAsync(HisDbContext db)

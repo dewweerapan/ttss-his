@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using TtssHis.Shared.Entities.Billing;
 using TtssHis.Shared.Entities.Core;
+using TtssHis.Shared.Entities.Medical;
+using TtssHis.Shared.Entities.Pharmacy;
+using TtssHis.Shared.Entities.Queue;
 
 namespace TtssHis.Shared.Entities.Encounter;
 
@@ -43,4 +47,10 @@ public sealed class Encounter
     public DateTime? DeletedDate { get; set; }
 
     public ICollection<Diagnosis> Diagnoses { get; set; } = [];
+
+    // Phase 2 navigation properties
+    public QueueItem? QueueItem { get; set; }
+    public ICollection<VitalSign> VitalSigns { get; set; } = [];
+    public ICollection<DrugOrder> DrugOrders { get; set; } = [];
+    public Invoice? Invoice { get; set; }
 }

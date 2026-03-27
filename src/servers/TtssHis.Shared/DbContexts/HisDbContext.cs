@@ -1,11 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using TtssHis.Shared.Constants;
+using TtssHis.Shared.Entities.Billing;
 using TtssHis.Shared.Entities.Core;
 using TtssHis.Shared.Entities.Encounter;
 using TtssHis.Shared.Entities.Insurance;
 using TtssHis.Shared.Entities.Medical;
 using TtssHis.Shared.Entities.Patient;
+using TtssHis.Shared.Entities.Pharmacy;
 using TtssHis.Shared.Entities.Product;
+using TtssHis.Shared.Entities.Queue;
 
 namespace TtssHis.Shared.DbContexts;
 
@@ -37,6 +40,15 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
     // Product
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<Pricing> Pricings { get; set; } = null!;
+
+    // Phase 2
+    public DbSet<QueueItem> QueueItems { get; set; } = null!;
+    public DbSet<VitalSign> VitalSigns { get; set; } = null!;
+    public DbSet<DrugOrder> DrugOrders { get; set; } = null!;
+    public DbSet<DrugOrderItem> DrugOrderItems { get; set; } = null!;
+    public DbSet<Invoice> Invoices { get; set; } = null!;
+    public DbSet<InvoiceItem> InvoiceItems { get; set; } = null!;
+    public DbSet<Receipt> Receipts { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +86,30 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
         modelBuilder.Entity<Product>(e =>
         {
             e.HasIndex(p => p.Code).IsUnique().HasFilter("\"DeletedDate\" IS NULL");
+        });
+
+        modelBuilder.Entity<QueueItem>(e =>
+        {
+            e.HasIndex(q => q.EncounterId).IsUnique();
+            e.HasIndex(q => new { q.DivisionId, q.Status });
+        });
+
+        modelBuilder.Entity<DrugOrder>(e =>
+        {
+            e.HasIndex(o => o.OrderNo).IsUnique();
+            e.HasIndex(o => new { o.EncounterId, o.Status });
+        });
+
+        modelBuilder.Entity<Invoice>(e =>
+        {
+            e.HasIndex(i => i.InvoiceNo).IsUnique();
+            e.HasIndex(i => i.EncounterId).IsUnique();
+        });
+
+        modelBuilder.Entity<Receipt>(e =>
+        {
+            e.HasIndex(r => r.InvoiceId).IsUnique();
+            e.HasIndex(r => r.ReceiptNo).IsUnique();
         });
 
         // Seed roles
