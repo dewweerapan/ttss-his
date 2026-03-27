@@ -60,6 +60,11 @@ export default function DoctorPage() {
   const [drugDays, setDrugDays] = useState<number | string>(7);
   const [drugInstruction, setDrugInstruction] = useState('');
 
+  // Lab order form
+  const [labTests, setLabTests] = useState<{ testCode: string; testName: string; unit: string; referenceRange: string }[]>([]);
+  const [labTestCode, setLabTestCode] = useState('');
+  const [labTestName, setLabTestName] = useState('');
+
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -126,6 +131,20 @@ export default function DoctorPage() {
       qc.invalidateQueries({ queryKey: ['drug-orders', selectedId] });
       setSelectedDrug(null); setDrugSearch(''); setDrugQty(1); setDrugFreq('OD'); setDrugDays(7); setDrugInstruction('');
       setSuccessMsg('สั่งยาแล้ว');
+    },
+    onError: (e: Error) => setErrorMsg(e.message),
+  });
+
+  const createLabOrderMutation = useMutation({
+    mutationFn: () => api.post(`/api/encounters/${selectedId}/lab-orders`, {
+      orderedBy: null,
+      notes: null,
+      items: labTests,
+    }),
+    onSuccess: () => {
+      setSuccessMsg('ส่งตรวจ Lab สำเร็จ');
+      setLabTests([]);
+      qc.invalidateQueries({ queryKey: ['lab-orders'] });
     },
     onError: (e: Error) => setErrorMsg(e.message),
   });
@@ -223,6 +242,7 @@ export default function DoctorPage() {
                 <Tabs.Tab value="info">ข้อมูลผู้ป่วย</Tabs.Tab>
                 <Tabs.Tab value="diagnosis">วินิจฉัย ({detail?.diagnoses.length ?? 0})</Tabs.Tab>
                 <Tabs.Tab value="drugs">สั่งยา ({drugOrders?.length ?? 0})</Tabs.Tab>
+                <Tabs.Tab value="lab">สั่ง Lab</Tabs.Tab>
               </Tabs.List>
 
               {/* Tab 1: Patient info + vitals */}
@@ -365,6 +385,75 @@ export default function DoctorPage() {
                         <Button size="sm" onClick={handleAddDrug} loading={createOrderMutation.isPending}>สั่งยา</Button>
                       </Group>
                     </Alert>
+                  )}
+                </Stack>
+              </Tabs.Panel>
+
+              {/* Tab 4: Lab orders */}
+              <Tabs.Panel value="lab" pt="sm">
+                <Stack gap="sm">
+                  <Group gap="xs">
+                    <TextInput
+                      placeholder="รหัสการตรวจ (เช่น CBC, FBS)"
+                      value={labTestCode}
+                      onChange={e => setLabTestCode(e.target.value.toUpperCase())}
+                      style={{ width: 140 }}
+                    />
+                    <TextInput
+                      placeholder="ชื่อการตรวจ"
+                      value={labTestName}
+                      onChange={e => setLabTestName(e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <Button size="sm" variant="outline"
+                      disabled={!labTestCode.trim() || !labTestName.trim()}
+                      onClick={() => {
+                        setLabTests(prev => [...prev, { testCode: labTestCode, testName: labTestName, unit: '', referenceRange: '' }]);
+                        setLabTestCode(''); setLabTestName('');
+                      }}>
+                      เพิ่ม
+                    </Button>
+                  </Group>
+                  <Group gap="xs" wrap="wrap">
+                    <Text size="xs" c="dimmed">ตรวจบ่อย:</Text>
+                    {['CBC', 'FBS', 'BUN', 'CR', 'LFT', 'UA', 'LIPID'].map(code => (
+                      <Button key={code} size="xs" variant="light"
+                        onClick={() => setLabTests(prev => prev.some(t => t.testCode === code) ? prev : [...prev, { testCode: code, testName: code, unit: '', referenceRange: '' }])}>
+                        {code}
+                      </Button>
+                    ))}
+                  </Group>
+                  {labTests.length > 0 && (
+                    <>
+                      <Paper withBorder>
+                        <Table>
+                          <Table.Thead>
+                            <Table.Tr><Table.Th>Code</Table.Th><Table.Th>รายการ</Table.Th><Table.Th>ลบ</Table.Th></Table.Tr>
+                          </Table.Thead>
+                          <Table.Tbody>
+                            {labTests.map((t, i) => (
+                              <Table.Tr key={i}>
+                                <Table.Td><Text size="sm" fw={600}>{t.testCode}</Text></Table.Td>
+                                <Table.Td><Text size="sm">{t.testName}</Text></Table.Td>
+                                <Table.Td>
+                                  <Button size="xs" color="red" variant="subtle"
+                                    onClick={() => setLabTests(prev => prev.filter((_, j) => j !== i))}>ลบ</Button>
+                                </Table.Td>
+                              </Table.Tr>
+                            ))}
+                          </Table.Tbody>
+                        </Table>
+                      </Paper>
+                      <Group justify="flex-end">
+                        <Button color="blue" loading={createLabOrderMutation.isPending}
+                          onClick={() => createLabOrderMutation.mutate()}>
+                          ส่งตรวจ Lab ({labTests.length} รายการ)
+                        </Button>
+                      </Group>
+                    </>
+                  )}
+                  {labTests.length === 0 && (
+                    <Text ta="center" c="dimmed" py="md">เพิ่มรายการตรวจด้านบน</Text>
                   )}
                 </Stack>
               </Tabs.Panel>
