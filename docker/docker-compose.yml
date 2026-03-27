@@ -1,0 +1,70 @@
+name: ttss-his
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: env/postgres.env
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - his
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U his_user -d ttss_his"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrations:
+    build:
+      context: ../src
+      dockerfile: servers/TtssHis.Database.Migrations/Dockerfile
+    env_file: env/facing.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - his
+    restart: on-failure
+
+  facing:
+    build:
+      context: ../src
+      dockerfile: servers/TtssHis.Facing/Dockerfile
+    env_file: env/facing.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    networks:
+      - his
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  his-app:
+    build:
+      context: ../src/clients/apps/his
+      dockerfile: Dockerfile
+    env_file: env/his-app.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      facing:
+        condition: service_healthy
+    networks:
+      - his
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
+networks:
+  his:
+    driver: bridge
