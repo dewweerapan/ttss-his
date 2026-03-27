@@ -56,6 +56,7 @@ public static class MasterDataSeeder
 
         var users = new[]
         {
+            new User { Id = "user-admin-001", Username = "admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin1234!"), FirstName = "ผู้ดูแล", LastName = "ระบบ", RoleId = RoleConstants.RoleId.Doctor, IsActive = true, CreatedDate = DateTime.UtcNow },
             new User { Id = "user-doctor-001", Username = "doctor1", PasswordHash = BCrypt.Net.BCrypt.HashPassword("doctor1234"), FirstName = "สมชาย", LastName = "ใจดี", RoleId = RoleConstants.RoleId.Doctor, DoctorId = "doc-001", IsActive = true, CreatedDate = DateTime.UtcNow },
             new User { Id = "user-doctor-002", Username = "doctor2", PasswordHash = BCrypt.Net.BCrypt.HashPassword("doctor1234"), FirstName = "สมหญิง", LastName = "รักษา", RoleId = RoleConstants.RoleId.Doctor, DoctorId = "doc-002", IsActive = true, CreatedDate = DateTime.UtcNow },
             new User { Id = "user-nurse-001", Username = "nurse1", PasswordHash = BCrypt.Net.BCrypt.HashPassword("nurse1234"), FirstName = "วันเพ็ญ", LastName = "ดูแล", RoleId = RoleConstants.RoleId.Nurse, IsActive = true, CreatedDate = DateTime.UtcNow },
