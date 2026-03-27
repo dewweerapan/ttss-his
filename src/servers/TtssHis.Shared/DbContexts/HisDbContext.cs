@@ -9,6 +9,7 @@ using TtssHis.Shared.Entities.Medical;
 using TtssHis.Shared.Entities.Patient;
 using TtssHis.Shared.Entities.Pharmacy;
 using TtssHis.Shared.Entities.Product;
+using TtssHis.Shared.Entities.Er;
 using TtssHis.Shared.Entities.Queue;
 
 namespace TtssHis.Shared.DbContexts;
@@ -56,6 +57,9 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
     public DbSet<Bed> Beds { get; set; } = null!;
     public DbSet<NursingNote> NursingNotes { get; set; } = null!;
     public DbSet<DoctorOrder> DoctorOrders { get; set; } = null!;
+
+    // Phase 4 — ER
+    public DbSet<ErTriage> ErTriages { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -139,6 +143,13 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
         modelBuilder.Entity<DoctorOrder>(e =>
         {
             e.HasIndex(o => new { o.EncounterId, o.Status });
+        });
+
+        // Phase 4 indexes
+        modelBuilder.Entity<ErTriage>(e =>
+        {
+            e.HasIndex(et => et.EncounterId).IsUnique();
+            e.HasIndex(et => new { et.Severity, et.TriageTime });
         });
 
         // Seed roles
