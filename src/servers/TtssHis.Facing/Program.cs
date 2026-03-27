@@ -47,7 +47,7 @@ var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnec
 builder.Services.AddHealthChecks()
     .AddNpgSql(defaultConnection, name: "database", tags: ["ready"]);
 
-new WebInitializer(builder.Configuration, builder.Environment).RegisterServices(builder.Services);
+new WebInitializer(builder.Configuration).RegisterServices(builder.Services);
 
 var app = builder.Build();
 

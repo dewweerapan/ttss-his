@@ -7,7 +7,7 @@ using TtssHis.Shared.DbContexts;
 
 namespace TtssHis.Facing;
 
-public sealed class WebInitializer(IConfiguration configuration, IWebHostEnvironment environment)
+public sealed class WebInitializer(IConfiguration configuration)
 {
     public void RegisterServices(IServiceCollection services)
     {
