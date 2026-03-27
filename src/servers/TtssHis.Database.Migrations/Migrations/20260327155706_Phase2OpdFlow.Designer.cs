@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TtssHis.Shared.DbContexts;
@@ -11,9 +12,11 @@ using TtssHis.Shared.DbContexts;
 namespace TtssHis.Database.Migrations.Migrations
 {
     [DbContext(typeof(HisDbContext))]
-    partial class HisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260327155706_Phase2OpdFlow")]
+    partial class Phase2OpdFlow
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
