@@ -1,6 +1,7 @@
 // src/clients/apps/his/src/app/(main)/registration/page.tsx
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Button, Group, Paper, Stack, Table, Text, TextInput, Title,
   Modal, Select, Badge, Alert,
@@ -23,6 +24,7 @@ type DivisionItem = { id: string; code: string; name: string };
 
 // ── Page ───────────────────────────────────────────────────────────────────
 export default function RegistrationPage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<PatientItem | null>(null);
@@ -89,6 +91,9 @@ export default function RegistrationPage() {
       <Table.Td>{p.gender === 1 ? 'ชาย' : 'หญิง'}</Table.Td>
       <Table.Td>{p.birthdate ?? '-'}</Table.Td>
       <Table.Td>{p.phoneNumber ?? '-'}</Table.Td>
+      <Table.Td onClick={(e) => e.stopPropagation()}>
+        <Button size="xs" variant="subtle" onClick={() => router.push(`/patients/${p.id}`)}>ประวัติ</Button>
+      </Table.Td>
     </Table.Tr>
   ));
 
@@ -122,11 +127,12 @@ export default function RegistrationPage() {
                 <Table.Th>เพศ</Table.Th>
                 <Table.Th>วันเกิด</Table.Th>
                 <Table.Th>เบอร์โทร</Table.Th>
+                <Table.Th>ประวัติ</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {rows.length > 0 ? rows : (
-                <Table.Tr><Table.Td colSpan={5}><Text ta="center" c="dimmed">ไม่พบข้อมูล</Text></Table.Td></Table.Tr>
+                <Table.Tr><Table.Td colSpan={6}><Text ta="center" c="dimmed">ไม่พบข้อมูล</Text></Table.Td></Table.Tr>
               )}
             </Table.Tbody>
           </Table>
