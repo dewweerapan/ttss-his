@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TtssHis.Shared.Constants;
+using TtssHis.Shared.Entities.Appointment;
 using TtssHis.Shared.Entities.Billing;
 using TtssHis.Shared.Entities.Core;
 using TtssHis.Shared.Entities.Encounter;
@@ -66,6 +67,9 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
     public DbSet<LabOrder> LabOrders { get; set; } = null!;
     public DbSet<LabOrderItem> LabOrderItems { get; set; } = null!;
     public DbSet<LabResult> LabResults { get; set; } = null!;
+
+    // Phase 8 — Appointments
+    public DbSet<Appointment> Appointments { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -168,6 +172,14 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
         modelBuilder.Entity<LabResult>(e =>
         {
             e.HasIndex(r => r.LabOrderItemId).IsUnique();
+        });
+
+        // Phase 8 indexes
+        modelBuilder.Entity<Appointment>(e =>
+        {
+            e.HasIndex(a => new { a.PatientId, a.ScheduledDate });
+            e.HasIndex(a => new { a.DoctorId, a.ScheduledDate });
+            e.HasIndex(a => new { a.DivisionId, a.ScheduledDate, a.Status });
         });
 
         // Seed roles
