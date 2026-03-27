@@ -5,6 +5,7 @@ using TtssHis.Shared.Entities.Core;
 using TtssHis.Shared.Entities.Encounter;
 using TtssHis.Shared.Entities.Insurance;
 using TtssHis.Shared.Entities.Ipd;
+using TtssHis.Shared.Entities.Lab;
 using TtssHis.Shared.Entities.Medical;
 using TtssHis.Shared.Entities.Patient;
 using TtssHis.Shared.Entities.Pharmacy;
@@ -60,6 +61,11 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
 
     // Phase 4 — ER
     public DbSet<ErTriage> ErTriages { get; set; } = null!;
+
+    // Phase 5 — Lab
+    public DbSet<LabOrder> LabOrders { get; set; } = null!;
+    public DbSet<LabOrderItem> LabOrderItems { get; set; } = null!;
+    public DbSet<LabResult> LabResults { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -150,6 +156,18 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
         {
             e.HasIndex(et => et.EncounterId).IsUnique();
             e.HasIndex(et => new { et.Severity, et.TriageTime });
+        });
+
+        // Phase 5 indexes
+        modelBuilder.Entity<LabOrder>(e =>
+        {
+            e.HasIndex(o => o.OrderNo).IsUnique();
+            e.HasIndex(o => new { o.EncounterId, o.Status });
+        });
+
+        modelBuilder.Entity<LabResult>(e =>
+        {
+            e.HasIndex(r => r.LabOrderItemId).IsUnique();
         });
 
         // Seed roles

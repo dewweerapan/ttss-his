@@ -16,6 +16,7 @@ public static class MasterDataSeeder
         await SeedCoveragesAsync(db);
         await SeedProductsAsync(db);
         await SeedWardsAsync(db);
+        await SeedLabProfilesAsync(db);
         await db.SaveChangesAsync();
         Console.WriteLine("Master data seeded.");
     }
@@ -138,6 +139,13 @@ public static class MasterDataSeeder
             new Coverage { Id = "cov-civil", Code = "CIVIL", Name = "สวัสดิการข้าราชการ", NameEn = "Civil Servant", Type = 1, IsActive = true, CreatedDate = DateTime.UtcNow },
         };
         await db.Coverages.AddRangeAsync(coverages);
+    }
+
+    private static async Task SeedLabProfilesAsync(HisDbContext db)
+    {
+        // No seeding needed — lab test codes are free-form input
+        // Lab tests are entered by doctor when ordering
+        await Task.CompletedTask;
     }
 
     private static async Task SeedWardsAsync(HisDbContext db)

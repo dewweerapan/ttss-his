@@ -61,4 +61,7 @@ public sealed class Encounter
 
     // Phase 4 navigation properties
     public Er.ErTriage? ErTriage { get; set; }
+
+    // Phase 5 navigation properties
+    public ICollection<Lab.LabOrder> LabOrders { get; set; } = [];
 }
