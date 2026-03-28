@@ -55,7 +55,7 @@ test.describe('SHELL-002: Sidebar Navigation', () => {
     await page.goto('/dashboard');
   });
 
-  test('should display all 7 nav items in sidebar', async ({ page }) => {
+  test('should display all nav items in sidebar', async ({ page }) => {
     const navItems = Object.values(SEL.nav);
     for (const selector of navItems) {
       await expect(page.locator(selector).first()).toBeVisible();

@@ -33,7 +33,7 @@ export const SEL = {
 
   // Main layout
   appTitle: 'text=TTSS HIS',
-  logoutButton: 'text=ออกจากระบบ',
+  logoutButton: '[data-testid="logout-button"]',
 
   // Dashboard — page shows h3 heading "Dashboard"
   dashboardTitle: 'h3:has-text("Dashboard")',

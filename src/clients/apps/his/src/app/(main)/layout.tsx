@@ -5,7 +5,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import {
@@ -35,6 +35,9 @@ type StoredUser = {
   role: string;
 };
 
+type NavItem = { label: string; href: string; icon: React.ComponentType<{ size?: number | string }>; badge?: number };
+type NavGroup = { group: string; items: NavItem[] };
+
 const ROLE_COLOR: Record<string, string> = {
   Doctor: 'blue',
   Nurse: 'teal',
@@ -47,17 +50,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [opened, { toggle }] = useDisclosure();
   const router = useRouter();
   const pathname = usePathname();
-  const [storedUser, setStoredUser] = useState<StoredUser | null>(null);
+  const [storedUser, setStoredUser] = useState<StoredUser | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem('his_user');
+      return raw ? (JSON.parse(raw) as StoredUser) : null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('his_token');
     if (!token) {
       router.push('/sign-in');
-      return;
-    }
-    const raw = localStorage.getItem('his_user');
-    if (raw) {
-      try { setStoredUser(JSON.parse(raw)); } catch { /* ignore */ }
     }
   }, [router]);
 
@@ -74,10 +80,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     router.push('/sign-in');
   };
 
-  type NavItem = { label: string; href: string; icon: React.ComponentType<{ size?: number | string }>; badge?: number };
-  type NavGroup = { group: string; items: NavItem[] };
-
-  const navGroups: NavGroup[] = [
+  const navGroups = useMemo<NavGroup[]>(() => [
     {
       group: 'OPD',
       items: [
@@ -136,7 +139,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         { label: 'Admin', href: '/admin', icon: IconSettings },
       ],
     },
-  ];
+  ], [counts]);
 
   const initials = storedUser
     ? (storedUser.firstName?.[0] ?? storedUser.username?.[0] ?? '?').toUpperCase()
@@ -156,7 +159,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <ThemeIcon variant="light" color="blue" size="md">
               <IconBuildingHospital size={16} />
             </ThemeIcon>
-            <Text fw={700} size="md">TTSS HIS</Text>
+            <Text component="h4" fw={700} size="md" style={{ margin: 0 }}>TTSS HIS</Text>
           </Group>
           <Group gap="sm">
             <Avatar color="blue" radius="xl" size="sm">{initials}</Avatar>
@@ -174,19 +177,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </Badge>
             </Stack>
             <Tooltip label="ออกจากระบบ">
-              <ActionIcon variant="subtle" color="gray" onClick={handleLogout} aria-label="ออกจากระบบ">
+              <ActionIcon variant="subtle" color="gray" onClick={handleLogout} aria-label="ออกจากระบบ" data-testid="logout-button">
                 <IconLogout size={18} />
               </ActionIcon>
             </Tooltip>
-            {/* Keep text for E2E selector compatibility */}
-            <Text
-              size="sm"
-              c="dimmed"
-              style={{ cursor: 'pointer', display: 'none' }}
-              onClick={handleLogout}
-            >
-              ออกจากระบบ
-            </Text>
           </Group>
         </Group>
       </AppShell.Header>
