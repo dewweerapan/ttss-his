@@ -139,3 +139,54 @@ test.describe('SHELL-004: Multiple Role Dashboard Verification', () => {
     });
   }
 });
+
+test.describe('SHELL-005: Grouped Sidebar Nav Headers', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaAPI(page, 'doctor');
+    await page.goto('/dashboard');
+    await page.waitForLoadState('domcontentloaded');
+  });
+
+  test('should display OPD nav group header', async ({ page }) => {
+    await expect(page.locator('text=OPD').first()).toBeVisible();
+  });
+
+  test('should display IPD nav group header', async ({ page }) => {
+    await expect(page.locator('text=IPD').first()).toBeVisible();
+  });
+
+  test('should display Diagnostics nav group header', async ({ page }) => {
+    await expect(page.locator('text=Diagnostics').first()).toBeVisible();
+  });
+
+  test('should still show all key nav labels after grouping', async ({ page }) => {
+    const labels = [
+      'ทะเบียนผู้ป่วย (REG)',
+      'คิว (QUE)',
+      'Triage (MAI)',
+      'ตรวจ OPD (DPO)',
+      'เภสัช (TPD)',
+      'การเงิน (BIL)',
+    ];
+    for (const label of labels) {
+      await expect(page.locator(`text=${label}`).first()).toBeVisible();
+    }
+  });
+});
+
+test.describe('SHELL-006: User Info in Header', () => {
+  test('should display logged-in user name in header', async ({ page }) => {
+    await loginViaAPI(page, 'doctor');
+    await page.goto('/dashboard');
+    await page.waitForLoadState('domcontentloaded');
+    // doctor1 firstName is "แพทย์" or similar from seed — just check there's a non-empty name element
+    await expect(page.locator('[data-testid="header-username"]')).toBeVisible();
+  });
+
+  test('should display role badge in header', async ({ page }) => {
+    await loginViaAPI(page, 'nurse');
+    await page.goto('/dashboard');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('[data-testid="header-role-badge"]')).toBeVisible();
+  });
+});
