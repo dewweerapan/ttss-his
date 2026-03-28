@@ -38,6 +38,15 @@ test.describe('SHELL-001: Dashboard after Login', () => {
   test('should display TTSS HIS in header', async ({ page }) => {
     await expect(page.locator('h4:has-text("TTSS HIS")')).toBeVisible();
   });
+
+  test('should use Inter font family on body', async ({ page }) => {
+    await loginViaAPI(page, 'doctor');
+    await page.goto('/dashboard');
+    const fontFamily = await page.evaluate(() =>
+      getComputedStyle(document.body).fontFamily
+    );
+    expect(fontFamily.toLowerCase()).toContain('inter');
+  });
 });
 
 test.describe('SHELL-002: Sidebar Navigation', () => {
