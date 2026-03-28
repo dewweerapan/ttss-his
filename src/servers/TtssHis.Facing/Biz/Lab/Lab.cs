@@ -169,6 +169,21 @@ public sealed class LabController(HisDbContext db) : ControllerBase
         return NoContent();
     }
 
+    // ── LAB HISTORY (cumulative per patient) ─────────────────────────────
+    /// <summary>GET /api/patients/{patientId}/lab-history — cumulative lab results</summary>
+    [HttpGet("api/patients/{patientId}/lab-history")]
+    public async Task<ActionResult<IEnumerable<LabOrderDto>>> LabHistory(string patientId)
+    {
+        var orders = await db.LabOrders
+            .Include(o => o.Items).ThenInclude(i => i.Result)
+            .Include(o => o.Encounter).ThenInclude(e => e!.Patient)
+            .Where(o => o.Encounter != null && o.Encounter.PatientId == patientId && o.Status == 4)
+            .OrderByDescending(o => o.RequestDate)
+            .ToListAsync();
+
+        return Ok(orders.Select(ToDto));
+    }
+
     // ── CANCEL ────────────────────────────────────────────────────────────
     /// <summary>PATCH /api/lab-orders/{id}/cancel</summary>
     [HttpPatch("api/lab-orders/{id}/cancel")]

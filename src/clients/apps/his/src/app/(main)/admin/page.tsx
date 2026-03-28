@@ -189,6 +189,7 @@ export default function AdminPage() {
           <Tabs.Tab value="products">รายการยา/บริการ</Tabs.Tab>
           <Tabs.Tab value="divisions">แผนก</Tabs.Tab>
           <Tabs.Tab value="stock-receive">รับสินค้า (PO)</Tabs.Tab>
+          <Tabs.Tab value="audit">Audit Log</Tabs.Tab>
         </Tabs.List>
 
         {/* ── USERS TAB ─────────────────────────────────────────────────── */}
@@ -318,6 +319,11 @@ export default function AdminPage() {
               </Table>
             </Paper>
           </Stack>
+        </Tabs.Panel>
+
+        {/* ── AUDIT LOG TAB ──────────────────────────────────────────────── */}
+        <Tabs.Panel value="audit" pt="sm">
+          <AuditLogPanel />
         </Tabs.Panel>
 
         {/* ── STOCK RECEIVE TAB ──────────────────────────────────────────── */}
@@ -490,6 +496,75 @@ function StockReceivePanel({ products, onSuccess, onError }: {
           </Group>
         </Stack>
       </Paper>
+    </Stack>
+  );
+}
+
+// ── Audit Log Panel ───────────────────────────────────────────────────────────
+type AuditLogItem = {
+  id: string; action: string; entityType?: string; entityId?: string;
+  userId?: string; username?: string; detail?: string; createdDate: string; ipAddress?: string;
+};
+
+function AuditLogPanel() {
+  const [page, setPage] = useState(1);
+  const [actionFilter, setActionFilter] = useState('');
+  const pageSize = 50;
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['admin', 'audit', page, actionFilter],
+    queryFn: () => api.get<{ items: AuditLogItem[]; total: number }>(
+      `/api/admin/audit-logs?page=${page}&pageSize=${pageSize}${actionFilter ? `&action=${encodeURIComponent(actionFilter)}` : ''}`
+    ),
+  });
+
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+
+  return (
+    <Stack gap="sm">
+      <Group>
+        <TextInput placeholder="กรอง Action..." value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(1); }} style={{ width: 200 }} />
+        <Button variant="light" size="xs" onClick={() => refetch()}>รีเฟรช</Button>
+        <Text size="sm" c="dimmed">ทั้งหมด {total} รายการ</Text>
+      </Group>
+      <Paper withBorder>
+        <Table striped highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>เวลา</Table.Th>
+              <Table.Th>Action</Table.Th>
+              <Table.Th>Entity</Table.Th>
+              <Table.Th>ผู้ใช้</Table.Th>
+              <Table.Th>รายละเอียด</Table.Th>
+              <Table.Th>IP</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {isLoading ? (
+              <Table.Tr><Table.Td colSpan={6}><Text ta="center">กำลังโหลด...</Text></Table.Td></Table.Tr>
+            ) : items.length === 0 ? (
+              <Table.Tr><Table.Td colSpan={6}><Text ta="center" c="dimmed">ไม่มีข้อมูล</Text></Table.Td></Table.Tr>
+            ) : items.map(log => (
+              <Table.Tr key={log.id}>
+                <Table.Td><Text size="xs" style={{ whiteSpace: 'nowrap' }}>{new Date(log.createdDate).toLocaleString('th-TH')}</Text></Table.Td>
+                <Table.Td><Badge size="sm" variant="light">{log.action}</Badge></Table.Td>
+                <Table.Td><Text size="xs">{log.entityType ?? '-'}{log.entityId ? ` / ${log.entityId.slice(0, 8)}` : ''}</Text></Table.Td>
+                <Table.Td><Text size="sm">{log.username ?? '-'}</Text></Table.Td>
+                <Table.Td><Text size="xs" c="dimmed">{log.detail ?? '-'}</Text></Table.Td>
+                <Table.Td><Text size="xs" c="dimmed">{log.ipAddress ?? '-'}</Text></Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Paper>
+      {total > pageSize && (
+        <Group gap="xs">
+          <Button size="xs" variant="light" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← ก่อนหน้า</Button>
+          <Text size="sm">หน้า {page} / {Math.ceil(total / pageSize)}</Text>
+          <Button size="xs" variant="light" disabled={page * pageSize >= total} onClick={() => setPage(p => p + 1)}>ถัดไป →</Button>
+        </Group>
+      )}
     </Stack>
   );
 }

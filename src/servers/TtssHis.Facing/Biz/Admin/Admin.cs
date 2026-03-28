@@ -243,6 +243,38 @@ public sealed class AdminController(HisDbContext db) : ControllerBase
     }
 
     // ══════════════════════════════════════════════════════════════════════
+    // AUDIT LOGS
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// <summary>GET /api/admin/audit-logs?page=1&pageSize=50&action=LOGIN</summary>
+    [HttpGet("api/admin/audit-logs")]
+    public ActionResult<AuditLogPageDto> GetAuditLogs(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? action = null,
+        [FromQuery] string? username = null)
+    {
+        var query = db.AuditLogs.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(action))
+            query = query.Where(l => l.Action.Contains(action));
+
+        if (!string.IsNullOrWhiteSpace(username))
+            query = query.Where(l => l.Username != null && l.Username.Contains(username));
+
+        var total = query.Count();
+        var items = query
+            .OrderByDescending(l => l.CreatedDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(l => new AuditLogDto(l.Id, l.Action, l.EntityType, l.EntityId,
+                l.UserId, l.Username, l.Detail, l.CreatedDate, l.IpAddress))
+            .ToList();
+
+        return Ok(new AuditLogPageDto(items, total));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
     // DIVISIONS
     // ══════════════════════════════════════════════════════════════════════
 
@@ -295,37 +327,6 @@ public sealed class AdminController(HisDbContext db) : ControllerBase
         return NoContent();
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // AUDIT LOGS
-    // ══════════════════════════════════════════════════════════════════════
-
-    /// <summary>GET /api/admin/audit-logs?page=1&pageSize=50&action=&userId=</summary>
-    [HttpGet("api/admin/audit-logs")]
-    public ActionResult<AuditLogPageResult> GetAuditLogs(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
-        [FromQuery] string? action = null,
-        [FromQuery] string? userId = null)
-    {
-        var query = db.AuditLogs.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(action))
-            query = query.Where(a => a.Action.Contains(action));
-        if (!string.IsNullOrWhiteSpace(userId))
-            query = query.Where(a => a.UserId == userId);
-
-        var total = query.Count();
-        var items = query
-            .OrderByDescending(a => a.CreatedDate)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(a => new AuditLogDto(
-                a.Id, a.Action, a.EntityType, a.EntityId,
-                a.UserId, a.Username, a.Detail, a.CreatedDate, a.IpAddress))
-            .ToList();
-
-        return Ok(new AuditLogPageResult(items, total));
-    }
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────
@@ -347,4 +348,4 @@ public record UpdateDivisionRequest(string Name, int Type, bool IsActive);
 public record AuditLogDto(
     string Id, string Action, string? EntityType, string? EntityId,
     string? UserId, string? Username, string? Detail, DateTime CreatedDate, string? IpAddress);
-public record AuditLogPageResult(IEnumerable<AuditLogDto> Items, int Total);
+public record AuditLogPageDto(IEnumerable<AuditLogDto> Items, int Total);

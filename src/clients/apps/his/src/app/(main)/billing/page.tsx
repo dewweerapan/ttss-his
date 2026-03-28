@@ -272,9 +272,15 @@ export default function BillingPage() {
                       <Divider label="ใบเสร็จ" my="sm" />
                       <Group justify="space-between">
                         <Text size="sm">{invoice.receipt.receiptNo} — {PAYMENT_METHOD_LABEL[invoice.receipt.paymentMethod] ?? '-'}</Text>
-                        <Text size="sm" fw={600} c="green">
-                          {invoice.receipt.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
-                        </Text>
+                        <Group gap="xs">
+                          <Text size="sm" fw={600} c="green">
+                            {invoice.receipt.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                          </Text>
+                          <Button size="xs" variant="subtle" component="a"
+                            href={`/print/receipt/${selectedEncounter?.encounterId}`} target="_blank">
+                            พิมพ์ใบเสร็จ
+                          </Button>
+                        </Group>
                       </Group>
                     </>
                   )}

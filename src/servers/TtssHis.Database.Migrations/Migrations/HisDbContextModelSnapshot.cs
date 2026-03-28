@@ -201,6 +201,108 @@ namespace TtssHis.Database.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.BloodBank.BloodRequest", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BloodGroup")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("BloodProduct")
+                        .HasColumnType("integer")
+                        .HasComment("WHOLE=1, PACKED_RBC=2, FFP=3, PLATELET=4, CRYOPRECIPITATE=5");
+
+                    b.Property<string>("CrossmatchResult")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReactionNotes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("PENDING=1, CROSSMATCH=2, READY=3, TRANSFUSED=4, CANCELLED=9");
+
+                    b.Property<DateTime?>("TransfusedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TransfusionNotes")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Units")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("BloodRequests", t =>
+                        {
+                            t.HasComment("คำขอโลหิต");
+                        });
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Claims.InsuranceClaim", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("ApprovedAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("ClaimAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("ClaimDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ClaimNo")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CoverageId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("DRAFT=1, SUBMITTED=2, APPROVED=3, REJECTED=4, PAID=5");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("InsuranceClaims", t =>
+                        {
+                            t.HasComment("การเรียกเก็บเงินจากประกัน/สิทธิ์");
+                        });
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Core.AuditLog", b =>
                 {
                     b.Property<string>("Id")
@@ -464,6 +566,53 @@ namespace TtssHis.Database.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.Dental.DentalRecord", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ChiefComplaint")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DentistName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Findings")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Materials")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NextAppointment")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProcedureType")
+                        .HasColumnType("integer")
+                        .HasComment("CHECKUP=1, FILLING=2, EXTRACTION=3, RCT=4, SCALING=5, DENTURE=6, ORTHODONTICS=7, SURGERY=8, OTHER=9");
+
+                    b.Property<string>("ToothNumbers")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Treatment")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("VisitDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("DentalRecords", t =>
+                        {
+                            t.HasComment("บันทึกทันตกรรม");
+                        });
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Encounter.Diagnosis", b =>
                 {
                     b.Property<string>("Id")
@@ -633,6 +782,58 @@ namespace TtssHis.Database.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.Imaging.ImagingOrder", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClinicalInfo")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Impression")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ModalityType")
+                        .HasColumnType("integer")
+                        .HasComment("XRAY=1, CT=2, MRI=3, ULTRASOUND=4, NUCLEAR=5, OTHER=9");
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OrderedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RadiologistName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RadiologyReport")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("ORDERED=1, SCHEDULED=2, IN_PROGRESS=3, COMPLETED=4, CANCELLED=9");
+
+                    b.Property<string>("StudyName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("ImagingOrders", t =>
+                        {
+                            t.HasComment("คำสั่งถ่ายภาพรังสี");
+                        });
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Insurance.Coverage", b =>
                 {
                     b.Property<string>("Id")
@@ -746,6 +947,49 @@ namespace TtssHis.Database.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.Ipd.DietOrder", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DietType")
+                        .HasColumnType("integer")
+                        .HasComment("REGULAR=1, SOFT=2, LIQUID=3, DIABETIC=4, LOW_SALT=5, OTHER=9");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Meal")
+                        .HasColumnType("integer")
+                        .HasComment("ALL=1, BREAKFAST=2, LUNCH=3, DINNER=4");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OrderedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("ACTIVE=1, CANCELLED=9");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("DietOrders", t =>
+                        {
+                            t.HasComment("คำสั่งอาหารผู้ป่วยใน");
+                        });
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Ipd.DoctorOrder", b =>
                 {
                     b.Property<string>("Id")
@@ -819,6 +1063,54 @@ namespace TtssHis.Database.Migrations.Migrations
                     b.ToTable("NursingNotes", t =>
                         {
                             t.HasComment("บันทึกการพยาบาล");
+                        });
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Ipd.SupplyRequest", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("DispensedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DispensedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("REQUESTED=1, DISPENSED=2, CANCELLED=9");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("SupplyRequests", t =>
+                        {
+                            t.HasComment("คำขอเวชภัณฑ์/อุปกรณ์ประจำหอผู้ป่วย");
                         });
                 });
 
@@ -1094,6 +1386,127 @@ namespace TtssHis.Database.Migrations.Migrations
                     b.ToTable("VitalSigns", t =>
                         {
                             t.HasComment("สัญญาณชีพ (บันทึกโดยพยาบาล)");
+                        });
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Or.SurgeryCase", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AnesthesiaType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AnesthesiologistName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OperatingRoom")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OperativeNotes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PostOpDiagnosis")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreOpDiagnosis")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProcedureName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("SCHEDULED=1, IN_PROGRESS=2, COMPLETED=3, CANCELLED=9");
+
+                    b.Property<string>("SurgeonId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SurgeonName")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("SurgeryCases", t =>
+                        {
+                            t.HasComment("ตารางผ่าตัด");
+                        });
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Pathology.PathologyOrder", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClinicalInfo")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Diagnosis")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MacroscopicFindings")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MicroscopicFindings")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OrderedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PathologistName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ReportedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SpecimenSite")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SpecimenType")
+                        .HasColumnType("integer")
+                        .HasComment("BIOPSY=1, HISTOLOGY=2, CYTOLOGY=3, FROZEN_SECTION=4, AUTOPSY=5, OTHER=9");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("ORDERED=1, RECEIVED=2, PROCESSING=3, REPORTED=4, CANCELLED=9");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("PathologyOrders", t =>
+                        {
+                            t.HasComment("คำสั่งส่งตรวจชิ้นเนื้อ/พยาธิวิทยา");
                         });
                 });
 
@@ -1558,6 +1971,115 @@ namespace TtssHis.Database.Migrations.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.Specialized.DialysisSession", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AccessType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Complications")
+                        .HasColumnType("text");
+
+                    b.Property<int>("DialysisType")
+                        .HasColumnType("integer")
+                        .HasComment("HD=1, HDF=2, CRRT=3, PD=4");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MachineNo")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NurseId")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("PostWeight")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("PreWeight")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("SCHEDULED=1, IN_PROGRESS=2, COMPLETED=3, CANCELLED=9");
+
+                    b.Property<decimal?>("UfAchieved")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("UfGoal")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("DialysisSessions", t =>
+                        {
+                            t.HasComment("บันทึกการฟอกไต");
+                        });
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Specialized.TreatmentRecord", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncounterId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Materials")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OutcomeNotes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PerformedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("PENDING=1, COMPLETED=2, CANCELLED=9");
+
+                    b.Property<int>("TreatmentType")
+                        .HasColumnType("integer")
+                        .HasComment("WOUND_CARE=1, IV_INFUSION=2, PHYSIOTHERAPY=3, INJECTION=4, DRESSING=5, OTHER=9");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EncounterId");
+
+                    b.ToTable("TreatmentRecords", t =>
+                        {
+                            t.HasComment("บันทึกการรักษาในห้องทำหัตถการ");
+                        });
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Appointment.Appointment", b =>
                 {
                     b.HasOne("TtssHis.Shared.Entities.Core.Division", "Division")
@@ -1622,6 +2144,28 @@ namespace TtssHis.Database.Migrations.Migrations
                     b.Navigation("Invoice");
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.BloodBank.BloodRequest", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Claims.InsuranceClaim", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Core.User", b =>
                 {
                     b.HasOne("TtssHis.Shared.Entities.Core.Doctor", "Doctor")
@@ -1637,6 +2181,17 @@ namespace TtssHis.Database.Migrations.Migrations
                     b.Navigation("Doctor");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Dental.DentalRecord", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
                 });
 
             modelBuilder.Entity("TtssHis.Shared.Entities.Encounter.Diagnosis", b =>
@@ -1692,6 +2247,17 @@ namespace TtssHis.Database.Migrations.Migrations
                     b.Navigation("Encounter");
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.Imaging.ImagingOrder", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Insurance.Payer", b =>
                 {
                     b.HasOne("TtssHis.Shared.Entities.Insurance.Coverage", "Coverage")
@@ -1718,6 +2284,17 @@ namespace TtssHis.Database.Migrations.Migrations
                     b.Navigation("Ward");
                 });
 
+            modelBuilder.Entity("TtssHis.Shared.Entities.Ipd.DietOrder", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
             modelBuilder.Entity("TtssHis.Shared.Entities.Ipd.DoctorOrder", b =>
                 {
                     b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
@@ -1733,6 +2310,17 @@ namespace TtssHis.Database.Migrations.Migrations
                 {
                     b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
                         .WithMany("NursingNotes")
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Ipd.SupplyRequest", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
                         .HasForeignKey("EncounterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1795,6 +2383,28 @@ namespace TtssHis.Database.Migrations.Migrations
                 {
                     b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
                         .WithMany("VitalSigns")
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Or.SurgeryCase", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Pathology.PathologyOrder", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
                         .HasForeignKey("EncounterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1890,6 +2500,28 @@ namespace TtssHis.Database.Migrations.Migrations
                     b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
                         .WithOne("QueueItem")
                         .HasForeignKey("TtssHis.Shared.Entities.Queue.QueueItem", "EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Specialized.DialysisSession", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Encounter");
+                });
+
+            modelBuilder.Entity("TtssHis.Shared.Entities.Specialized.TreatmentRecord", b =>
+                {
+                    b.HasOne("TtssHis.Shared.Entities.Encounter.Encounter", "Encounter")
+                        .WithMany()
+                        .HasForeignKey("EncounterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

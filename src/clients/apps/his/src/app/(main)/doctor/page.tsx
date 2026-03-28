@@ -2,9 +2,10 @@
 'use client';
 import { useState } from 'react';
 import {
-  ActionIcon, Badge, Button, Divider, Grid, Group, NumberInput,
+  ActionIcon, Badge, Button, Divider, Grid, Group, Modal, NumberInput,
   Paper, Select, Stack, Table, Tabs, Text, TextInput, Textarea, Title, Alert,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -67,6 +68,15 @@ export default function DoctorPage() {
 
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Med-cert modal
+  const [certOpen, { open: openCert, close: closeCert }] = useDisclosure(false);
+  const [certDiagnosis, setCertDiagnosis] = useState('');
+  const [certRestDays, setCertRestDays] = useState<number | string>(1);
+  const [certDoctorName, setCertDoctorName] = useState('');
+
+  // Drug interaction warnings
+  const [interactions, setInteractions] = useState<{ drug1: string; drug2: string; severity: string; description: string }[]>([]);
 
   // Queries
   const { data: listData, isLoading } = useQuery({
@@ -149,8 +159,24 @@ export default function DoctorPage() {
     onError: (e: Error) => setErrorMsg(e.message),
   });
 
-  const handleAddDrug = () => {
+  const handleAddDrug = async () => {
     if (!selectedDrug) return;
+
+    // Check interaction with already-ordered drugs in this encounter
+    const existingProductIds = (drugOrders ?? [])
+      .filter(o => o.status !== 9)
+      .flatMap(o => o.items.map(() => selectedDrug.id));
+    const allIds = [selectedDrug.id, ...existingProductIds].filter((v, i, a) => a.indexOf(v) === i);
+
+    if (allIds.length > 1) {
+      try {
+        const res = await api.post<{ interactions: { drug1: string; drug2: string; severity: string; description: string }[] }>(
+          '/api/drug-interactions/check', { productIds: allIds }
+        );
+        setInteractions(res.interactions);
+      } catch { /* non-blocking */ }
+    }
+
     createOrderMutation.mutate({
       items: [{
         productId: selectedDrug.id,
@@ -242,14 +268,22 @@ export default function DoctorPage() {
                       size="sm"
                       style={{ minWidth: 180 }}
                     />
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      component="a"
-                      href={`/print/encounter/${selectedId}`}
-                      target="_blank"
-                    >
+                    <Button size="xs" variant="outline" component="a"
+                      href={`/print/encounter/${selectedId}`} target="_blank">
                       พิมพ์สรุป
+                    </Button>
+                    <Button size="xs" variant="outline" color="indigo" component="a"
+                      href={`/print/discharge/${selectedId}`} target="_blank">
+                      Discharge
+                    </Button>
+                    <Button size="xs" variant="outline" color="teal"
+                      onClick={() => {
+                        setCertDiagnosis(detail?.diagnoses[0]?.icd10Name ?? detail?.diagnoses[0]?.description ?? '');
+                        setCertRestDays(1);
+                        setCertDoctorName('');
+                        openCert();
+                      }}>
+                      ใบรับรองแพทย์
                     </Button>
                   </Group>
                 </Group>
@@ -364,6 +398,19 @@ export default function DoctorPage() {
                       ))}
                     </Paper>
                   ))}
+
+                  {interactions.length > 0 && (
+                    <Alert color="orange" title="⚠️ พบ Drug Interaction" withCloseButton onClose={() => setInteractions([])}>
+                      {interactions.map((ix, i) => (
+                        <Text key={i} size="sm">
+                          <Badge size="xs" color={ix.severity === 'CRITICAL' ? 'red' : ix.severity === 'HIGH' ? 'orange' : 'yellow'}>
+                            {ix.severity}
+                          </Badge>{' '}
+                          {ix.drug1} + {ix.drug2}: {ix.description}
+                        </Text>
+                      ))}
+                    </Alert>
+                  )}
 
                   <Divider label="สั่งยาใหม่" />
 
@@ -480,6 +527,25 @@ export default function DoctorPage() {
           </Stack>
         )}
       </Grid.Col>
+
+      {/* Med-cert modal */}
+      <Modal opened={certOpen} onClose={closeCert} title="ออกใบรับรองแพทย์" size="md">
+        <Stack gap="sm">
+          <TextInput label="การวินิจฉัย / อาการ" value={certDiagnosis}
+            onChange={e => setCertDiagnosis(e.target.value)} placeholder="เช่น ไข้หวัด ปวดหัว..." />
+          <NumberInput label="จำนวนวันพัก" value={certRestDays} onChange={setCertRestDays} min={0} max={365} />
+          <TextInput label="ชื่อแพทย์" value={certDoctorName}
+            onChange={e => setCertDoctorName(e.target.value)} placeholder="เช่น นพ. สมชาย ใจดี" />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={closeCert}>ยกเลิก</Button>
+            <Button color="teal" component="a" target="_blank"
+              href={`/print/med-cert/${selectedId}?diagnosis=${encodeURIComponent(certDiagnosis)}&restDays=${certRestDays}&doctorName=${encodeURIComponent(certDoctorName)}`}
+              onClick={closeCert}>
+              พิมพ์
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Grid>
   );
 }

@@ -2,7 +2,7 @@
 'use client';
 import { useState } from 'react';
 import {
-  Alert, Badge, Button, Group, Modal, Paper, Select, Stack,
+  Alert, Badge, Button, Group, Modal, NumberInput, Paper, Select, Stack,
   Table, Tabs, Text, Textarea, TextInput, Title,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -21,7 +21,21 @@ type DoctorOrder = {
   id: string; encounterId: string; orderType: number; orderContent: string;
   doctorId?: string; status: number; orderDate: string; completedAt?: string; notes?: string;
 };
+type DietOrder = {
+  id: string; encounterId: string; dietType: number; meal: number;
+  notes?: string; status: number; orderDate: string; orderedBy?: string;
+};
+type SupplyRequest = {
+  id: string; encounterId: string; itemName: string; quantity: number;
+  notes?: string; status: number; requestDate: string; requestedBy?: string; dispensedAt?: string;
+};
 
+const DIET_TYPE_LABEL: Record<number, string> = {
+  1: 'อาหารปกติ', 2: 'อาหารอ่อน', 3: 'อาหารเหลว', 4: 'เบาหวาน', 5: 'ลดเค็ม', 9: 'อื่นๆ',
+};
+const MEAL_LABEL: Record<number, string> = {
+  1: 'ทุกมื้อ', 2: 'เช้า', 3: 'กลางวัน', 4: 'เย็น',
+};
 const NOTE_TYPE_LABEL: Record<number, string> = {
   1: 'Assessment', 2: 'Intervention', 3: 'Evaluation', 4: 'Progress Note',
 };
@@ -52,6 +66,18 @@ export default function IpdChartPage() {
   const [orderContent, setOrderContent] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
 
+  const [dietOpen, { open: openDiet, close: closeDiet }] = useDisclosure(false);
+  const [dietType, setDietType] = useState<string | null>('1');
+  const [dietMeal, setDietMeal] = useState<string | null>('1');
+  const [dietNotes, setDietNotes] = useState('');
+  const [dietOrderedBy, setDietOrderedBy] = useState('');
+
+  const [supplyOpen, { open: openSupply, close: closeSupply }] = useDisclosure(false);
+  const [supplyItem, setSupplyItem] = useState('');
+  const [supplyQty, setSupplyQty] = useState<number | string>(1);
+  const [supplyNotes, setSupplyNotes] = useState('');
+  const [supplyReqBy, setSupplyReqBy] = useState('');
+
   const { data: encounters = [], refetch: refetchEncounters } = useQuery({
     queryKey: ['admissions'],
     queryFn: () => api.get<IpdEncounter[]>('/api/admissions'),
@@ -67,6 +93,18 @@ export default function IpdChartPage() {
   const { data: doctorOrders = [], refetch: refetchOrders } = useQuery({
     queryKey: ['doctor-orders-ipd', selectedEncounter?.encounterId],
     queryFn: () => api.get<DoctorOrder[]>(`/api/encounters/${selectedEncounter!.encounterId}/doctor-orders`),
+    enabled: !!selectedEncounter,
+  });
+
+  const { data: dietOrders = [], refetch: refetchDiet } = useQuery({
+    queryKey: ['diet-orders', selectedEncounter?.encounterId],
+    queryFn: () => api.get<DietOrder[]>(`/api/encounters/${selectedEncounter!.encounterId}/diet-orders`),
+    enabled: !!selectedEncounter,
+  });
+
+  const { data: supplyRequests = [], refetch: refetchSupply } = useQuery({
+    queryKey: ['supply-requests', selectedEncounter?.encounterId],
+    queryFn: () => api.get<SupplyRequest[]>(`/api/encounters/${selectedEncounter!.encounterId}/supply-requests`),
     enabled: !!selectedEncounter,
   });
 
@@ -119,6 +157,43 @@ export default function IpdChartPage() {
   const cancelOrderMutation = useMutation({
     mutationFn: (orderId: string) => api.patch(`/api/doctor-orders/${orderId}/cancel`, {}),
     onSuccess: () => { setSuccessMsg('ยกเลิกคำสั่งแล้ว'); refetchOrders(); },
+    onError: (e: Error) => setErrorMsg(e.message),
+  });
+
+  const addDietMutation = useMutation({
+    mutationFn: () => api.post(`/api/encounters/${selectedEncounter!.encounterId}/diet-orders`, {
+      dietType: Number(dietType), meal: Number(dietMeal),
+      notes: dietNotes || null, orderedBy: dietOrderedBy || null,
+    }),
+    onSuccess: () => {
+      setSuccessMsg('บันทึกคำสั่งอาหารสำเร็จ'); setErrorMsg('');
+      closeDiet(); setDietNotes(''); setDietOrderedBy(''); refetchDiet();
+    },
+    onError: (e: Error) => setErrorMsg(e.message),
+  });
+
+  const cancelDietMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/api/diet-orders/${id}/cancel`, {}),
+    onSuccess: () => { setSuccessMsg('ยกเลิกคำสั่งอาหารแล้ว'); refetchDiet(); },
+    onError: (e: Error) => setErrorMsg(e.message),
+  });
+
+  const addSupplyMutation = useMutation({
+    mutationFn: () => api.post(`/api/encounters/${selectedEncounter!.encounterId}/supply-requests`, {
+      itemName: supplyItem, productId: null,
+      quantity: Number(supplyQty), notes: supplyNotes || null, requestedBy: supplyReqBy || null,
+    }),
+    onSuccess: () => {
+      setSuccessMsg('บันทึกคำขอเวชภัณฑ์สำเร็จ'); setErrorMsg('');
+      closeSupply(); setSupplyItem(''); setSupplyQty(1); setSupplyNotes(''); setSupplyReqBy('');
+      refetchSupply();
+    },
+    onError: (e: Error) => setErrorMsg(e.message),
+  });
+
+  const dispenseSupplyMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/api/supply-requests/${id}/dispense`, { dispensedBy: null }),
+    onSuccess: () => { setSuccessMsg('จ่ายเวชภัณฑ์สำเร็จ'); refetchSupply(); },
     onError: (e: Error) => setErrorMsg(e.message),
   });
 
@@ -181,6 +256,8 @@ export default function IpdChartPage() {
                 <Tabs.List>
                   <Tabs.Tab value="notes">บันทึกการพยาบาล ({nursingNotes.length})</Tabs.Tab>
                   <Tabs.Tab value="orders">คำสั่งแพทย์ ({doctorOrders.length})</Tabs.Tab>
+                  <Tabs.Tab value="diet">อาหาร ({dietOrders.length})</Tabs.Tab>
+                  <Tabs.Tab value="supply">เวชภัณฑ์ ({supplyRequests.length})</Tabs.Tab>
                 </Tabs.List>
 
                 <Tabs.Panel value="notes" pt="sm">
@@ -280,6 +357,114 @@ export default function IpdChartPage() {
                     )}
                   </Stack>
                 </Tabs.Panel>
+
+                {/* Diet Orders Tab */}
+                <Tabs.Panel value="diet" pt="sm">
+                  <Stack gap="sm">
+                    <Group justify="flex-end">
+                      <Button size="sm" onClick={() => { setDietType('1'); setDietMeal('1'); setDietNotes(''); setDietOrderedBy(''); openDiet(); }}>
+                        + สั่งอาหาร
+                      </Button>
+                    </Group>
+                    {dietOrders.length === 0 ? (
+                      <Text ta="center" c="dimmed" py="lg">ยังไม่มีคำสั่งอาหาร</Text>
+                    ) : (
+                      <Paper withBorder>
+                        <Table>
+                          <Table.Thead>
+                            <Table.Tr>
+                              <Table.Th>ประเภทอาหาร</Table.Th>
+                              <Table.Th>มื้อ</Table.Th>
+                              <Table.Th>สถานะ</Table.Th>
+                              <Table.Th>วันที่</Table.Th>
+                              <Table.Th>Actions</Table.Th>
+                            </Table.Tr>
+                          </Table.Thead>
+                          <Table.Tbody>
+                            {dietOrders.map(d => (
+                              <Table.Tr key={d.id}>
+                                <Table.Td>
+                                  <Text size="sm">{DIET_TYPE_LABEL[d.dietType] ?? '-'}</Text>
+                                  {d.notes && <Text size="xs" c="dimmed">{d.notes}</Text>}
+                                </Table.Td>
+                                <Table.Td><Text size="sm">{MEAL_LABEL[d.meal] ?? '-'}</Text></Table.Td>
+                                <Table.Td>
+                                  <Badge size="sm" color={d.status === 1 ? 'green' : 'red'}>
+                                    {d.status === 1 ? 'Active' : 'ยกเลิก'}
+                                  </Badge>
+                                </Table.Td>
+                                <Table.Td><Text size="xs">{new Date(d.orderDate).toLocaleDateString('th-TH')}</Text></Table.Td>
+                                <Table.Td>
+                                  {d.status === 1 && (
+                                    <Button size="xs" color="red" variant="subtle"
+                                      loading={cancelDietMutation.isPending}
+                                      onClick={() => cancelDietMutation.mutate(d.id)}>
+                                      ยกเลิก
+                                    </Button>
+                                  )}
+                                </Table.Td>
+                              </Table.Tr>
+                            ))}
+                          </Table.Tbody>
+                        </Table>
+                      </Paper>
+                    )}
+                  </Stack>
+                </Tabs.Panel>
+
+                {/* Supply Requests Tab */}
+                <Tabs.Panel value="supply" pt="sm">
+                  <Stack gap="sm">
+                    <Group justify="flex-end">
+                      <Button size="sm" onClick={() => { setSupplyItem(''); setSupplyQty(1); setSupplyNotes(''); setSupplyReqBy(''); openSupply(); }}>
+                        + ขอเวชภัณฑ์
+                      </Button>
+                    </Group>
+                    {supplyRequests.length === 0 ? (
+                      <Text ta="center" c="dimmed" py="lg">ยังไม่มีคำขอเวชภัณฑ์</Text>
+                    ) : (
+                      <Paper withBorder>
+                        <Table>
+                          <Table.Thead>
+                            <Table.Tr>
+                              <Table.Th>รายการ</Table.Th>
+                              <Table.Th>จำนวน</Table.Th>
+                              <Table.Th>สถานะ</Table.Th>
+                              <Table.Th>วันที่</Table.Th>
+                              <Table.Th>Actions</Table.Th>
+                            </Table.Tr>
+                          </Table.Thead>
+                          <Table.Tbody>
+                            {supplyRequests.map(s => (
+                              <Table.Tr key={s.id}>
+                                <Table.Td>
+                                  <Text size="sm">{s.itemName}</Text>
+                                  {s.notes && <Text size="xs" c="dimmed">{s.notes}</Text>}
+                                </Table.Td>
+                                <Table.Td><Text size="sm">{s.quantity}</Text></Table.Td>
+                                <Table.Td>
+                                  <Badge size="sm" color={s.status === 1 ? 'orange' : s.status === 2 ? 'green' : 'red'}>
+                                    {s.status === 1 ? 'รอจ่าย' : s.status === 2 ? 'จ่ายแล้ว' : 'ยกเลิก'}
+                                  </Badge>
+                                </Table.Td>
+                                <Table.Td><Text size="xs">{new Date(s.requestDate).toLocaleDateString('th-TH')}</Text></Table.Td>
+                                <Table.Td>
+                                  {s.status === 1 && (
+                                    <Button size="xs" color="green" variant="outline"
+                                      loading={dispenseSupplyMutation.isPending}
+                                      onClick={() => dispenseSupplyMutation.mutate(s.id)}>
+                                      จ่าย
+                                    </Button>
+                                  )}
+                                </Table.Td>
+                              </Table.Tr>
+                            ))}
+                          </Table.Tbody>
+                        </Table>
+                      </Paper>
+                    )}
+                  </Stack>
+                </Tabs.Panel>
               </Tabs>
             </Stack>
           )}
@@ -360,6 +545,52 @@ export default function IpdChartPage() {
               disabled={!orderContent.trim()} onClick={() => addOrderMutation.mutate()}>
               บันทึก
             </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Diet Order Modal */}
+      <Modal opened={dietOpen} onClose={closeDiet} title="สั่งอาหาร">
+        <Stack gap="sm">
+          <Select
+            label="ประเภทอาหาร"
+            data={[
+              { value: '1', label: 'อาหารปกติ' }, { value: '2', label: 'อาหารอ่อน' },
+              { value: '3', label: 'อาหารเหลว' }, { value: '4', label: 'เบาหวาน' },
+              { value: '5', label: 'ลดเค็ม' }, { value: '9', label: 'อื่นๆ' },
+            ]}
+            value={dietType} onChange={setDietType}
+          />
+          <Select
+            label="มื้ออาหาร"
+            data={[
+              { value: '1', label: 'ทุกมื้อ' }, { value: '2', label: 'เช้า' },
+              { value: '3', label: 'กลางวัน' }, { value: '4', label: 'เย็น' },
+            ]}
+            value={dietMeal} onChange={setDietMeal}
+          />
+          <TextInput label="หมายเหตุ" value={dietNotes} onChange={e => setDietNotes(e.target.value)} placeholder="ข้อมูลเพิ่มเติม (ถ้ามี)" />
+          <TextInput label="สั่งโดย" value={dietOrderedBy} onChange={e => setDietOrderedBy(e.target.value)} placeholder="ชื่อแพทย์/พยาบาล" />
+          {errorMsg && <Alert color="red">{errorMsg}</Alert>}
+          <Group justify="flex-end">
+            <Button variant="default" onClick={closeDiet}>ยกเลิก</Button>
+            <Button color="green" loading={addDietMutation.isPending} onClick={() => addDietMutation.mutate()}>บันทึก</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Supply Request Modal */}
+      <Modal opened={supplyOpen} onClose={closeSupply} title="ขอเวชภัณฑ์">
+        <Stack gap="sm">
+          <TextInput label="รายการ" value={supplyItem} onChange={e => setSupplyItem(e.target.value)} placeholder="ชื่อยา/เวชภัณฑ์/อุปกรณ์" required />
+          <NumberInput label="จำนวน" value={supplyQty} onChange={setSupplyQty} min={1} max={999} />
+          <TextInput label="หมายเหตุ" value={supplyNotes} onChange={e => setSupplyNotes(e.target.value)} placeholder="หมายเหตุ (ถ้ามี)" />
+          <TextInput label="ขอโดย" value={supplyReqBy} onChange={e => setSupplyReqBy(e.target.value)} placeholder="ชื่อพยาบาล/ผู้ขอ" />
+          {errorMsg && <Alert color="red">{errorMsg}</Alert>}
+          <Group justify="flex-end">
+            <Button variant="default" onClick={closeSupply}>ยกเลิก</Button>
+            <Button color="blue" loading={addSupplyMutation.isPending}
+              disabled={!supplyItem.trim()} onClick={() => addSupplyMutation.mutate()}>บันทึก</Button>
           </Group>
         </Stack>
       </Modal>

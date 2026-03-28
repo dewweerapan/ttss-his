@@ -12,6 +12,13 @@ using TtssHis.Shared.Entities.Patient;
 using TtssHis.Shared.Entities.Pharmacy;
 using TtssHis.Shared.Entities.Product;
 using TtssHis.Shared.Entities.Er;
+using TtssHis.Shared.Entities.BloodBank;
+using TtssHis.Shared.Entities.Claims;
+using TtssHis.Shared.Entities.Dental;
+using TtssHis.Shared.Entities.Imaging;
+using TtssHis.Shared.Entities.Pathology;
+using TtssHis.Shared.Entities.Specialized;
+using TtssHis.Shared.Entities.Or;
 using TtssHis.Shared.Entities.Queue;
 
 namespace TtssHis.Shared.DbContexts;
@@ -59,6 +66,30 @@ public sealed class HisDbContext(DbContextOptions<HisDbContext> options) : DbCon
     public DbSet<Bed> Beds { get; set; } = null!;
     public DbSet<NursingNote> NursingNotes { get; set; } = null!;
     public DbSet<DoctorOrder> DoctorOrders { get; set; } = null!;
+    public DbSet<DietOrder> DietOrders { get; set; } = null!;
+    public DbSet<SupplyRequest> SupplyRequests { get; set; } = null!;
+
+    // OR / Surgical
+    public DbSet<SurgeryCase> SurgeryCases { get; set; } = null!;
+
+    // Blood Bank
+    public DbSet<BloodRequest> BloodRequests { get; set; } = null!;
+
+    // Imaging / Radiology
+    public DbSet<ImagingOrder> ImagingOrders { get; set; } = null!;
+
+    // Pathology
+    public DbSet<PathologyOrder> PathologyOrders { get; set; } = null!;
+
+    // Specialized
+    public DbSet<DialysisSession> DialysisSessions { get; set; } = null!;
+    public DbSet<TreatmentRecord> TreatmentRecords { get; set; } = null!;
+
+    // Dental
+    public DbSet<DentalRecord> DentalRecords { get; set; } = null!;
+
+    // Claims
+    public DbSet<InsuranceClaim> InsuranceClaims { get; set; } = null!;
 
     // Phase 4 — ER
     public DbSet<ErTriage> ErTriages { get; set; } = null!;

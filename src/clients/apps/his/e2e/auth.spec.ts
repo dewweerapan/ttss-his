@@ -59,8 +59,8 @@ test.describe('AUTH-002: Successful Login — All Roles', () => {
       // Verify redirect to dashboard
       await expect(page).toHaveURL('/dashboard', { timeout: 10_000 });
 
-      // Verify welcome message contains user info
-      await expect(page.locator(SEL.welcomeText)).toBeVisible();
+      // Verify dashboard heading is visible (page loaded correctly)
+      await expect(page.locator(SEL.dashboardTitle).first()).toBeVisible();
 
       // Verify token was stored
       const token = await page.evaluate(() => localStorage.getItem('his_token'));
