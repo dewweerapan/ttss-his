@@ -1,0 +1,173 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ─────────────────────────────────────────────
+    //  INDIVIDUAL TASKS
+    // ─────────────────────────────────────────────
+    {
+      "label": "1: Start PostgreSQL",
+      "type": "shell",
+      "command": "docker compose up postgres -d --wait",
+      "options": {
+        "cwd": "${workspaceFolder}/docker"
+      },
+      "presentation": {
+        "group": "his-dev",
+        "panel": "shared",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "2: Run Migrations",
+      "type": "shell",
+      "command": "dotnet run --project src/servers/TtssHis.Database.Migrations/TtssHis.Database.Migrations.csproj",
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
+      "dependsOn": ["1: Start PostgreSQL"],
+      "presentation": {
+        "group": "his-dev",
+        "panel": "shared",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "3: Run Backend (watch)",
+      "type": "shell",
+      "command": "dotnet watch --project src/servers/TtssHis.Facing/TtssHis.Facing.csproj",
+      "options": {
+        "cwd": "${workspaceFolder}/src"
+      },
+      "dependsOn": ["2: Run Migrations"],
+      "isBackground": true,
+      "presentation": {
+        "group": "his-dev",
+        "panel": "dedicated",
+        "label": "Backend (.NET)",
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "owner": "dotnet",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "file": 1,
+          "line": 1,
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Building\\.\\.\\.",
+          "endsPattern": "Application started\\."
+        }
+      }
+    },
+    {
+      "label": "4: Run Frontend (dev)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/src/clients/apps/his"
+      },
+      "dependsOn": ["3: Run Backend (watch)"],
+      "isBackground": true,
+      "presentation": {
+        "group": "his-dev",
+        "panel": "dedicated",
+        "label": "Frontend (Next.js)",
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "owner": "nextjs",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "file": 1,
+          "line": 1,
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "\\$ next dev",
+          "endsPattern": "Ready in"
+        }
+      }
+    },
+
+    // ─────────────────────────────────────────────
+    //  COMPOUND — กด Run Task ทีเดียว
+    // ─────────────────────────────────────────────
+    {
+      "label": "🚀 Start HIS Dev",
+      "dependsOn": ["4: Run Frontend (dev)"],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+
+    // ─────────────────────────────────────────────
+    //  EXTRAS
+    // ─────────────────────────────────────────────
+    {
+      "label": "🐳 Start Full Stack (Docker)",
+      "type": "shell",
+      "command": "docker compose up --build",
+      "options": {
+        "cwd": "${workspaceFolder}/docker"
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "label": "Docker Compose",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🛑 Stop All Docker",
+      "type": "shell",
+      "command": "docker compose down",
+      "options": {
+        "cwd": "${workspaceFolder}/docker"
+      },
+      "presentation": {
+        "panel": "shared",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Run E2E Tests",
+      "type": "shell",
+      "command": "npm run test:e2e",
+      "options": {
+        "cwd": "${workspaceFolder}/src/clients/apps/his"
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "label": "E2E Tests",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Run E2E Tests (UI mode)",
+      "type": "shell",
+      "command": "npm run test:e2e:ui",
+      "options": {
+        "cwd": "${workspaceFolder}/src/clients/apps/his"
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "label": "Playwright UI",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
