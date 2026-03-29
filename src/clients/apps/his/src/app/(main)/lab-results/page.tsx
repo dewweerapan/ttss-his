@@ -1,6 +1,7 @@
 // src/clients/apps/his/src/app/(main)/lab-results/page.tsx
 'use client';
 import { useState } from 'react';
+import { useDebouncedValue } from '@mantine/hooks';
 import {
   Alert, Badge, Button, Group, Paper, Stack, Table, Text, TextInput, Title,
   Collapse, ActionIcon,
@@ -24,14 +25,15 @@ type LabOrderDto = {
 
 export default function LabResultsPage() {
   const [searchHn, setSearchHn] = useState('');
+  const [debouncedSearchHn] = useDebouncedValue(searchHn, 300);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   const { data: patients = [], isFetching: searching } = useQuery({
-    queryKey: ['patient-search', searchHn],
-    queryFn: () => api.get<Patient[]>(`/api/patients?search=${searchHn}`),
-    enabled: searchHn.length >= 2,
+    queryKey: ['patient-search', debouncedSearchHn],
+    queryFn: () => api.get<Patient[]>(`/api/patients?search=${debouncedSearchHn}`),
+    enabled: debouncedSearchHn.length >= 2,
   });
 
   const { data: history = [], isFetching: loadingHistory } = useQuery({

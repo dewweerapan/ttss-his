@@ -5,7 +5,7 @@ import {
   Alert, Badge, Button, Group, Modal, Paper, Select, Stack,
   Table, Text, Textarea, TextInput, Title,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useDebouncedValue } from '@mantine/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -34,6 +34,7 @@ export default function ReferringPage() {
 
   const [direction, setDirection] = useState<string | null>('OUT');
   const [patientSearch, setPatientSearch] = useState('');
+  const [debouncedPatientSearch] = useDebouncedValue(patientSearch, 300);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [hospital, setHospital] = useState('');
   const [reason, setReason] = useState('');
@@ -41,9 +42,9 @@ export default function ReferringPage() {
   const [notes, setNotes] = useState('');
 
   const { data: patientResults = [] } = useQuery({
-    queryKey: ['patients', 'search', patientSearch],
-    queryFn: () => api.get<Patient[]>(`/api/patients?search=${encodeURIComponent(patientSearch)}`),
-    enabled: patientSearch.length >= 2,
+    queryKey: ['patients', 'search', debouncedPatientSearch],
+    queryFn: () => api.get<Patient[]>(`/api/patients?search=${encodeURIComponent(debouncedPatientSearch)}`),
+    enabled: debouncedPatientSearch.length >= 2,
   });
 
   const handleCreate = () => {

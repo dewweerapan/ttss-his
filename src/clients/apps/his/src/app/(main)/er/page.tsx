@@ -5,7 +5,7 @@ import {
   Alert, Badge, Button, Group, Modal, Paper, Select, Stack,
   Table, Text, Textarea, TextInput, Title,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useDebouncedValue } from '@mantine/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -33,6 +33,7 @@ export default function ErPage() {
 
   // Register form
   const [patientSearch, setPatientSearch] = useState('');
+  const [debouncedPatientSearch] = useDebouncedValue(patientSearch, 300);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [chiefComplaint, setChiefComplaint] = useState('');
   const [severity, setSeverity] = useState<string | null>('3');
@@ -53,9 +54,9 @@ export default function ErPage() {
   });
 
   const { data: patientResults = [] } = useQuery({
-    queryKey: ['patients', 'search', patientSearch],
-    queryFn: () => api.get<{ items: Patient[] }>(`/api/patients?search=${encodeURIComponent(patientSearch)}`).then(r => r.items ?? []),
-    enabled: patientSearch.length >= 2,
+    queryKey: ['patients', 'search', debouncedPatientSearch],
+    queryFn: () => api.get<{ items: Patient[] }>(`/api/patients?search=${encodeURIComponent(debouncedPatientSearch)}`).then(r => r.items ?? []),
+    enabled: debouncedPatientSearch.length >= 2,
   });
 
   const registerMutation = useMutation({

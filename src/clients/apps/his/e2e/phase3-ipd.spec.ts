@@ -267,6 +267,262 @@ test.describe('IPD-004: IPD Chart — Supply Requests', () => {
 });
 
 // ──────────────────────────────────────────────
+// ADM-002: Admission Detail & Transfer
+// ──────────────────────────────────────────────
+test.describe('ADM-002: Admission Detail & Transfer', () => {
+  test('should GET /api/admissions/{id}', async ({ request }) => {
+    if (!admissionId) test.skip();
+    const res = await request.get(`${API_BASE_URL}/api/admissions/${admissionId}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    expect([200, 404]).toContain(res.status());
+    if (res.status() === 200) {
+      const body = await res.json();
+      expect(body.id ?? body.encounterId ?? body.admissionId).toBeTruthy();
+    }
+  });
+
+  test('should PATCH /api/admissions/{id}/transfer', async ({ request }) => {
+    if (!admissionId) test.skip();
+    const wardsRes = await request.get(`${API_BASE_URL}/api/wards`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    if (!wardsRes.ok()) { test.skip(); return; }
+    const wards = await wardsRes.json();
+    const items = Array.isArray(wards) ? wards : (wards.items ?? []);
+    const targetWard = items.find((w: { id: string }) => w.id !== 'ward-gen') ?? items[0];
+    if (!targetWard) { test.skip(); return; }
+
+    const bedsRes = await request.get(`${API_BASE_URL}/api/wards/${targetWard.id}/beds`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    if (!bedsRes.ok()) { test.skip(); return; }
+    const beds = await bedsRes.json();
+    const availableBed = beds.find((b: { status: number }) => b.status === 1);
+    if (!availableBed) { test.skip(); return; }
+
+    const res = await request.patch(`${API_BASE_URL}/api/admissions/${admissionId}/transfer`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      data: { bedId: availableBed.id, reason: 'ย้ายหอผู้ป่วยตามความเหมาะสมทางคลินิก' },
+    });
+    expect([200, 204, 400]).toContain(res.status());
+  });
+
+  test('should PATCH /api/encounters/{id}/discharge-ipd', async ({ request }) => {
+    if (!admissionId) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/encounters/${admissionId}/discharge-ipd`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: {
+          dischargeType: 1,
+          dischargeCondition: 1,
+          dischargeNotes: 'อาการดีขึ้น จำหน่ายกลับบ้าน',
+          followUpDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+        },
+      },
+    );
+    expect([200, 204, 400]).toContain(res.status());
+  });
+});
+
+// ──────────────────────────────────────────────
+// IPD-005: Nursing Note Delete
+// ──────────────────────────────────────────────
+test.describe('IPD-005: Nursing Note Delete', () => {
+  test('should DELETE /api/nursing-notes/{id}', async ({ request }) => {
+    if (!admissionId) test.skip();
+    const createRes = await request.post(
+      `${API_BASE_URL}/api/encounters/${admissionId}/nursing-notes`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { noteType: 1, content: 'Note to be deleted — E2E test' },
+      },
+    );
+    if (!createRes.ok()) { test.skip(); return; }
+    const body = await createRes.json();
+    const noteId = body.id ?? body.noteId;
+    if (!noteId) { test.skip(); return; }
+
+    const res = await request.delete(`${API_BASE_URL}/api/nursing-notes/${noteId}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    expect([200, 204]).toContain(res.status());
+  });
+});
+
+// ──────────────────────────────────────────────
+// IPD-006: Doctor Orders Complete & Cancel
+// ──────────────────────────────────────────────
+test.describe('IPD-006: Doctor Orders Complete & Cancel', () => {
+  let doctorToken2: string;
+  let doctorOrderIdComplete: string;
+  let doctorOrderIdCancel: string;
+
+  test.beforeAll(async ({ request }) => {
+    const r = await request.post(`${API_BASE_URL}/api/auth/login`, {
+      data: { username: TEST_USERS.doctor.username, password: TEST_USERS.doctor.password },
+    });
+    if (r.ok()) doctorToken2 = (await r.json()).accessToken;
+    if (!admissionId || !doctorToken2) return;
+
+    const res1 = await request.post(
+      `${API_BASE_URL}/api/encounters/${admissionId}/doctor-orders`,
+      {
+        headers: { Authorization: `Bearer ${doctorToken2}` },
+        data: { orderType: 1, orderContent: 'Monitor vitals q4h — E2E complete test' },
+      },
+    );
+    if (res1.ok()) doctorOrderIdComplete = (await res1.json()).id;
+
+    const res2 = await request.post(
+      `${API_BASE_URL}/api/encounters/${admissionId}/doctor-orders`,
+      {
+        headers: { Authorization: `Bearer ${doctorToken2}` },
+        data: { orderType: 1, orderContent: 'Monitor vitals q8h — E2E cancel test' },
+      },
+    );
+    if (res2.ok()) doctorOrderIdCancel = (await res2.json()).id;
+  });
+
+  test('should PATCH /api/doctor-orders/{id}/complete', async ({ request }) => {
+    if (!doctorOrderIdComplete || !doctorToken2) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/doctor-orders/${doctorOrderIdComplete}/complete`,
+      {
+        headers: { Authorization: `Bearer ${doctorToken2}` },
+        data: { completionNotes: 'Done — vitals stable' },
+      },
+    );
+    expect([200, 204, 400]).toContain(res.status());
+  });
+
+  test('should PATCH /api/doctor-orders/{id}/cancel', async ({ request }) => {
+    if (!doctorOrderIdCancel || !doctorToken2) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/doctor-orders/${doctorOrderIdCancel}/cancel`,
+      {
+        headers: { Authorization: `Bearer ${doctorToken2}` },
+        data: { reason: 'ยกเลิกโดย E2E test' },
+      },
+    );
+    expect([200, 204, 400]).toContain(res.status());
+  });
+});
+
+// ──────────────────────────────────────────────
+// IPD-007: Diet Order Cancel
+// ──────────────────────────────────────────────
+test.describe('IPD-007: Diet Order Cancel', () => {
+  test('should PATCH /api/diet-orders/{id}/cancel', async ({ request }) => {
+    if (!admissionId) test.skip();
+    const createRes = await request.post(
+      `${API_BASE_URL}/api/encounters/${admissionId}/diet-orders`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { dietType: 2, meal: 2, notes: 'อาหารอ่อน — to cancel' },
+      },
+    );
+    if (!createRes.ok()) { test.skip(); return; }
+    const body = await createRes.json();
+    const dietOrderId = body.id ?? body.dietOrderId;
+    if (!dietOrderId) { test.skip(); return; }
+
+    const res = await request.patch(`${API_BASE_URL}/api/diet-orders/${dietOrderId}/cancel`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      data: { reason: 'ยกเลิกโดย E2E test' },
+    });
+    expect([200, 204, 400]).toContain(res.status());
+  });
+});
+
+// ──────────────────────────────────────────────
+// IPD-008: Supply Request Dispense & Cancel
+// ──────────────────────────────────────────────
+test.describe('IPD-008: Supply Request Dispense & Cancel', () => {
+  let supplyIdToDispense: string;
+  let supplyIdToCancel: string;
+
+  test.beforeAll(async ({ request }) => {
+    if (!admissionId) return;
+
+    const res1 = await request.post(
+      `${API_BASE_URL}/api/encounters/${admissionId}/supply-requests`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { itemName: 'ถุงมือยาง (dispense)', quantity: 5, unit: 'คู่', urgency: 2, notes: '' },
+      },
+    );
+    if (res1.ok()) supplyIdToDispense = (await res1.json()).id;
+
+    const res2 = await request.post(
+      `${API_BASE_URL}/api/encounters/${admissionId}/supply-requests`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { itemName: 'ผ้าก๊อซ (cancel)', quantity: 10, unit: 'แผ่น', urgency: 1, notes: '' },
+      },
+    );
+    if (res2.ok()) supplyIdToCancel = (await res2.json()).id;
+  });
+
+  test('should PATCH /api/supply-requests/{id}/dispense', async ({ request }) => {
+    if (!supplyIdToDispense) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/supply-requests/${supplyIdToDispense}/dispense`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { dispensedBy: TEST_USERS.nurse.username },
+      },
+    );
+    expect([200, 204, 400]).toContain(res.status());
+  });
+
+  test('should PATCH /api/supply-requests/{id}/cancel', async ({ request }) => {
+    if (!supplyIdToCancel) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/supply-requests/${supplyIdToCancel}/cancel`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { reason: 'ยกเลิกโดย E2E test' },
+      },
+    );
+    expect([200, 204, 400]).toContain(res.status());
+  });
+});
+
+// ──────────────────────────────────────────────
+// WRD-002: Bed Management (get by ID & status update)
+// ──────────────────────────────────────────────
+test.describe('WRD-002: Bed Management', () => {
+  test('should GET /api/beds/{bedId}', async ({ request }) => {
+    if (!bedId) test.skip();
+    const res = await request.get(`${API_BASE_URL}/api/beds/${bedId}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    expect([200, 404]).toContain(res.status());
+    if (res.status() === 200) {
+      const body = await res.json();
+      expect(body.id ?? body.bedId).toBeTruthy();
+    }
+  });
+
+  test('should PATCH /api/beds/{bedId}/status', async ({ request }) => {
+    if (!bedId) test.skip();
+    const res = await request.patch(`${API_BASE_URL}/api/beds/${bedId}/status`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      data: { status: 3, notes: 'ทำความสะอาดเตียง E2E test' },
+    });
+    expect([200, 204, 400]).toContain(res.status());
+  });
+
+  test('should return 401 without token on beds', async ({ request }) => {
+    if (!bedId) test.skip();
+    const res = await request.get(`${API_BASE_URL}/api/beds/${bedId}`);
+    expect(res.status()).toBe(401);
+  });
+});
+
+// ──────────────────────────────────────────────
 // IPD-UI-001: IPD Frontend Navigation
 // ──────────────────────────────────────────────
 test.describe('IPD-UI-001: IPD Frontend Navigation', () => {

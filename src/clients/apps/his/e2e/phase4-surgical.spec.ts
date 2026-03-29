@@ -235,6 +235,60 @@ test.describe('BLB-001: Blood Bank — Request Workflow', () => {
 });
 
 // ──────────────────────────────────────────────
+// OR-003: Surgery Case Cancel
+// ──────────────────────────────────────────────
+test.describe('OR-003: Operating Room — Surgery Case Cancel', () => {
+  let cancelSurgeryCaseId: string;
+
+  test.beforeAll(async ({ request }) => {
+    if (!encounterId) return;
+    const scheduledAt = new Date();
+    scheduledAt.setDate(scheduledAt.getDate() + 2);
+
+    const res = await request.post(`${API_BASE_URL}/api/surgery-cases`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      data: {
+        encounterId,
+        procedureName: 'Cholecystectomy (to cancel)',
+        operatingRoom: 'OR-2',
+        scheduledAt: scheduledAt.toISOString(),
+        surgeonName: 'นพ.ทดสอบ ยกเลิก',
+        anesthesiaType: 'General',
+        preOpDiagnosis: 'Acute cholecystitis',
+      },
+    });
+    if (res.ok()) {
+      const body = await res.json();
+      cancelSurgeryCaseId = body.id ?? body.surgeryCaseId;
+    }
+  });
+
+  test('should PATCH /api/surgery-cases/{id}/cancel', async ({ request }) => {
+    if (!cancelSurgeryCaseId) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/surgery-cases/${cancelSurgeryCaseId}/cancel`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { reason: 'ผู้ป่วยปฏิเสธการผ่าตัด — E2E test' },
+      },
+    );
+    expect([200, 204]).toContain(res.status());
+  });
+
+  test('cancelled case should NOT appear in status=1 list', async ({ request }) => {
+    if (!cancelSurgeryCaseId) test.skip();
+    const res = await request.get(`${API_BASE_URL}/api/surgery-cases?status=1`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    const items = Array.isArray(body) ? body : (body.items ?? []);
+    const found = items.some((c: { id?: string }) => c.id === cancelSurgeryCaseId);
+    expect(found).toBe(false);
+  });
+});
+
+// ──────────────────────────────────────────────
 // OR-UI-001: Surgical Frontend Navigation
 // ──────────────────────────────────────────────
 test.describe('OR-UI-001: Surgical Frontend Navigation', () => {

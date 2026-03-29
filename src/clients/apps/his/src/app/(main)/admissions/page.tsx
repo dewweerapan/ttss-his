@@ -5,7 +5,7 @@ import {
   Alert, Badge, Button, Group, Modal, Paper, Select, Stack,
   Table, Text, TextInput, Title,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useDebouncedValue } from '@mantine/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -27,6 +27,7 @@ export default function AdmissionsPage() {
 
   const [admitOpen, { open: openAdmit, close: closeAdmit }] = useDisclosure(false);
   const [patientSearch, setPatientSearch] = useState('');
+  const [debouncedPatientSearch] = useDebouncedValue(patientSearch, 300);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
   const [selectedBedId, setSelectedBedId] = useState<string | null>(null);
@@ -58,9 +59,9 @@ export default function AdmissionsPage() {
   });
 
   const { data: patientResults = [] } = useQuery({
-    queryKey: ['patients', 'search', patientSearch],
-    queryFn: () => api.get<Patient[]>(`/api/patients?search=${encodeURIComponent(patientSearch)}`),
-    enabled: patientSearch.length >= 2,
+    queryKey: ['patients', 'search', debouncedPatientSearch],
+    queryFn: () => api.get<Patient[]>(`/api/patients?search=${encodeURIComponent(debouncedPatientSearch)}`),
+    enabled: debouncedPatientSearch.length >= 2,
   });
 
   const { data: doctors = [] } = useQuery({

@@ -243,6 +243,73 @@ test.describe('DEN-001: Dental Records API', () => {
 });
 
 // ──────────────────────────────────────────────
+// TRT-002: Treatment Record Cancel
+// ──────────────────────────────────────────────
+test.describe('TRT-002: Treatment Record Cancel', () => {
+  test('should PATCH /api/treatment-records/{id}/cancel', async ({ request }) => {
+    if (!encounterId) test.skip();
+    const createRes = await request.post(`${API_BASE_URL}/api/treatment-records`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      data: {
+        encounterId,
+        treatmentType: 2,
+        description: 'IV line insertion — to cancel',
+        materials: 'IV catheter 20G, NSS 100mL',
+        performedBy: TEST_USERS.nurse.username,
+        scheduledAt: new Date().toISOString(),
+      },
+    });
+    if (!createRes.ok()) { test.skip(); return; }
+    const body = await createRes.json();
+    const idToCancel = body.id ?? body.treatmentRecordId;
+    if (!idToCancel) { test.skip(); return; }
+
+    const res = await request.patch(
+      `${API_BASE_URL}/api/treatment-records/${idToCancel}/cancel`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { reason: 'ยกเลิกโดย E2E test — ผู้ป่วยปฏิเสธ' },
+      },
+    );
+    expect([200, 204]).toContain(res.status());
+  });
+});
+
+// ──────────────────────────────────────────────
+// HDM-002: Dialysis Session Filters
+// ──────────────────────────────────────────────
+test.describe('HDM-002: Dialysis Session Filters', () => {
+  test('should filter dialysis sessions by encounterId', async ({ request }) => {
+    if (!encounterId) test.skip();
+    const res = await request.get(
+      `${API_BASE_URL}/api/dialysis-sessions?encounterId=${encounterId}`,
+      { headers: { Authorization: `Bearer ${authToken}` } },
+    );
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    const items = Array.isArray(body) ? body : (body.items ?? []);
+    expect(Array.isArray(items)).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────
+// DEN-002: Dental Record Detail
+// ──────────────────────────────────────────────
+test.describe('DEN-002: Dental Record Detail', () => {
+  test('should get dental record by ID', async ({ request }) => {
+    if (!dentalRecordId) test.skip();
+    const res = await request.get(`${API_BASE_URL}/api/dental-records/${dentalRecordId}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    expect([200, 404]).toContain(res.status());
+    if (res.status() === 200) {
+      const body = await res.json();
+      expect(body.id ?? body.dentalRecordId).toBe(dentalRecordId);
+    }
+  });
+});
+
+// ──────────────────────────────────────────────
 // SPEC-UI-001: Specialized Frontend Navigation
 // ──────────────────────────────────────────────
 test.describe('SPEC-UI-001: Specialized Modules Frontend Navigation', () => {

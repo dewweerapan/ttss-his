@@ -1,6 +1,7 @@
 // src/clients/apps/his/src/app/(main)/phr/page.tsx
 'use client';
 import { useState } from 'react';
+import { useDebouncedValue } from '@mantine/hooks';
 import {
   Alert, Badge, Button, Divider, Group, Paper, Stack, Table, Text, TextInput, Title,
 } from '@mantine/core';
@@ -33,12 +34,13 @@ const MODALITY: Record<number, string> = { 1: 'X-Ray', 2: 'CT', 3: 'MRI', 4: 'Ul
 
 export default function PhrPage() {
   const [searchHn, setSearchHn] = useState('');
+  const [debouncedSearchHn] = useDebouncedValue(searchHn, 300);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   const { data: patients = [] } = useQuery({
-    queryKey: ['patient-search-phr', searchHn],
-    queryFn: () => api.get<Patient[]>(`/api/patients?search=${searchHn}`),
-    enabled: searchHn.length >= 2,
+    queryKey: ['patient-search-phr', debouncedSearchHn],
+    queryFn: () => api.get<Patient[]>(`/api/patients?search=${debouncedSearchHn}`),
+    enabled: debouncedSearchHn.length >= 2,
   });
 
   const { data: encounters = [] } = useQuery({

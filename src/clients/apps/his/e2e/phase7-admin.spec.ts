@@ -335,6 +335,110 @@ test.describe('ADM-AUD-001: Admin — Audit Log API', () => {
 });
 
 // ──────────────────────────────────────────────
+// APP-002: Appointment Reschedule
+// ──────────────────────────────────────────────
+test.describe('APP-002: Appointment Reschedule', () => {
+  test('should PATCH /api/appointments/{id}/reschedule', async ({ request }) => {
+    if (!appointmentId) test.skip();
+    const newDate = new Date();
+    newDate.setDate(newDate.getDate() + 14);
+
+    const res = await request.patch(
+      `${API_BASE_URL}/api/appointments/${appointmentId}/reschedule`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: {
+          scheduledDate: newDate.toISOString(),
+          timeSlot: 2,
+          reason: 'ผู้ป่วยติดธุระ ขอเลื่อนนัด — E2E test',
+        },
+      },
+    );
+    expect([200, 204, 400]).toContain(res.status());
+  });
+
+  test('should return 401 without token on appointment reschedule', async ({ request }) => {
+    const res = await request.patch(`${API_BASE_URL}/api/appointments/test-id/reschedule`, {
+      data: { scheduledDate: new Date().toISOString(), timeSlot: 1 },
+    });
+    expect(res.status()).toBe(401);
+  });
+});
+
+// ──────────────────────────────────────────────
+// CLM-002: Insurance Claim Reject
+// ──────────────────────────────────────────────
+test.describe('CLM-002: Insurance Claim Reject', () => {
+  let rejectClaimId: string;
+
+  test.beforeAll(async ({ request }) => {
+    if (!encounterId) return;
+    const createRes = await request.post(`${API_BASE_URL}/api/insurance-claims`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      data: { encounterId, coverageId: null, claimAmount: 800.0, notes: 'Claim to reject — E2E test' },
+    });
+    if (!createRes.ok()) return;
+    const body = await createRes.json();
+    rejectClaimId = body.id ?? body.claimId;
+
+    if (rejectClaimId) {
+      await request.patch(`${API_BASE_URL}/api/insurance-claims/${rejectClaimId}/submit`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+    }
+  });
+
+  test('should PATCH /api/insurance-claims/{id}/reject', async ({ request }) => {
+    if (!rejectClaimId) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/insurance-claims/${rejectClaimId}/reject`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: { reason: 'เอกสารไม่ครบถ้วน — E2E test rejection' },
+      },
+    );
+    expect([200, 204]).toContain(res.status());
+  });
+
+  test('should return 401 without token on claim reject', async ({ request }) => {
+    const res = await request.patch(`${API_BASE_URL}/api/insurance-claims/test-id/reject`, {
+      data: { reason: 'test' },
+    });
+    expect(res.status()).toBe(401);
+  });
+});
+
+// ──────────────────────────────────────────────
+// RPT-002: Dashboard Stats Field Validation
+// ──────────────────────────────────────────────
+test.describe('RPT-002: Dashboard Stats Field Validation', () => {
+  test('dashboard stats should have all required KPI fields', async ({ request }) => {
+    const today = new Date().toISOString().split('T')[0];
+    const res = await request.get(`${API_BASE_URL}/api/dashboard/stats?date=${today}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(typeof body.opdToday).toBe('number');
+    expect(typeof body.ipdAdmitted).toBe('number');
+    expect(typeof body.ipdDischarged).toBe('number');
+    expect(typeof body.erToday).toBe('number');
+    expect(typeof body.totalBeds).toBe('number');
+    expect(typeof body.occupiedBeds).toBe('number');
+    expect(typeof body.revenueToday).toBe('number');
+    expect(typeof body.labOrdersToday).toBe('number');
+    expect(typeof body.drugOrdersPending).toBe('number');
+  });
+
+  test('should GET /api/reports/monthly', async ({ request }) => {
+    const res = await request.get(`${API_BASE_URL}/api/reports/monthly`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    expect([200, 404]).toContain(res.status());
+  });
+});
+
+// ──────────────────────────────────────────────
 // ADMIN-UI-001: Administrative Frontend Navigation
 // ──────────────────────────────────────────────
 test.describe('ADMIN-UI-001: Administrative Frontend Navigation', () => {

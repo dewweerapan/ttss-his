@@ -127,6 +127,53 @@ test.describe('ER-002: ER Severity Levels (ESI 1-5)', () => {
 });
 
 // ──────────────────────────────────────────────
+// ER-003: ER Triage & Disposition
+// ──────────────────────────────────────────────
+test.describe('ER-003: ER Triage & Disposition', () => {
+  test('should PATCH /api/er/encounters/{id}/triage', async ({ request }) => {
+    if (!erEncounterId) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/er/encounters/${erEncounterId}/triage`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: {
+          severity: 2,
+          triageNotes: 'ผู้ป่วยปวดมาก อาการเร่งด่วน ต้องการตรวจเร็ว',
+          triageBy: TEST_USERS.nurse.username,
+          temperature: 37.8,
+          pulseRate: 95,
+          bpSystolic: 135,
+          bpDiastolic: 90,
+        },
+      },
+    );
+    expect([200, 204]).toContain(res.status());
+  });
+
+  test('should PATCH /api/er/encounters/{id}/disposition', async ({ request }) => {
+    if (!erEncounterId) test.skip();
+    const res = await request.patch(
+      `${API_BASE_URL}/api/er/encounters/${erEncounterId}/disposition`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+        data: {
+          dispositionType: 1,
+          dispositionNotes: 'อาการดีขึ้น จำหน่ายกลับบ้าน',
+        },
+      },
+    );
+    expect([200, 204]).toContain(res.status());
+  });
+
+  test('should return 401 without token on ER triage', async ({ request }) => {
+    const res = await request.patch(`${API_BASE_URL}/api/er/encounters/test-id/triage`, {
+      data: { severity: 1 },
+    });
+    expect(res.status()).toBe(401);
+  });
+});
+
+// ──────────────────────────────────────────────
 // ER-UI-001: ER Frontend
 // ──────────────────────────────────────────────
 test.describe('ER-UI-001: Emergency Room Frontend', () => {

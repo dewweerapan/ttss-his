@@ -6,7 +6,7 @@ import {
   Button, Group, Paper, Stack, Table, Text, TextInput, Textarea, Title,
   Modal, Select, Badge, Alert, Grid,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useDebouncedValue } from '@mantine/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -30,7 +30,7 @@ const BLOOD_OPTIONS = ['A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'
 export default function RegistrationPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const [submittedSearch, setSubmittedSearch] = useState('');
+  const [debouncedSearch] = useDebouncedValue(search, 300);
   const [selectedPatient, setSelectedPatient] = useState<PatientItem | null>(null);
   const [divisionId, setDivisionId] = useState<string | null>('div-opd');
   const [successMsg, setSuccessMsg] = useState('');
@@ -53,12 +53,12 @@ export default function RegistrationPage() {
   const [npBlood, setNpBlood] = useState<string | null>(null);
 
   const { data: patients, isFetching } = useQuery({
-    queryKey: ['patients', submittedSearch],
+    queryKey: ['patients', debouncedSearch],
     queryFn: () =>
       api.get<PatientListResponse>(
-        `/api/patients?search=${encodeURIComponent(submittedSearch)}&pageSize=30`
+        `/api/patients?search=${encodeURIComponent(debouncedSearch)}&pageSize=30`
       ),
-    enabled: submittedSearch.length >= 2,
+    enabled: debouncedSearch.length >= 2,
   });
 
   const { data: divisions } = useQuery({
@@ -97,7 +97,7 @@ export default function RegistrationPage() {
     onSuccess: (data) => {
       setSuccessMsg(`ลงทะเบียนผู้ป่วยใหม่สำเร็จ HN: ${data.hn}`);
       setErrorMsg(''); closeNewPatient();
-      setSubmittedSearch(data.hn);
+      setSearch(data.hn);
       qc.invalidateQueries({ queryKey: ['patients'] });
     },
     onError: (e: Error) => setErrorMsg(e.message),
@@ -115,7 +115,7 @@ export default function RegistrationPage() {
     onError: (e: Error) => setErrorMsg(e.message),
   });
 
-  const handleSearch = () => { setSubmittedSearch(search.trim()); setSuccessMsg(''); setErrorMsg(''); };
+  const handleSearch = () => { setSearch(search.trim()); setSuccessMsg(''); setErrorMsg(''); };
   const handleCreate = () => { if (!selectedPatient || !divisionId) return; createEncounter.mutate({ patientId: selectedPatient.id, divisionId, type: 1 }); };
   const handleOpenAllergyModal = () => { setAllergyInput(patientDetail?.allergy ?? ''); setAllergyNoteInput(patientDetail?.allergyNote ?? ''); openAllergyModal(); };
   const handleOpenNewPatient = () => { setNpPreName(null); setNpFirst(''); setNpLast(''); setNpGender('1'); setNpBirthdate(''); setNpCitizenNo(''); setNpPhone(''); setNpBlood(null); openNewPatient(); };

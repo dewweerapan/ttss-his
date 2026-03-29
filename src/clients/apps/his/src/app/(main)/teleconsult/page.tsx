@@ -5,7 +5,7 @@ import {
   Alert, Badge, Button, Group, Modal, Paper, Select, Stack,
   Table, Text, Textarea, TextInput, Title,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useDebouncedValue } from '@mantine/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -27,6 +27,7 @@ export default function TeleconsultPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [patientSearch, setPatientSearch] = useState('');
+  const [debouncedPatientSearch] = useDebouncedValue(patientSearch, 300);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [consultType, setConsultType] = useState<string | null>('1');
   const [platform, setPlatform] = useState('');
@@ -43,9 +44,9 @@ export default function TeleconsultPage() {
   });
 
   const { data: patientResults = [] } = useQuery({
-    queryKey: ['patients', 'search', patientSearch],
-    queryFn: () => api.get<Patient[]>(`/api/patients?search=${encodeURIComponent(patientSearch)}`),
-    enabled: patientSearch.length >= 2,
+    queryKey: ['patients', 'search', debouncedPatientSearch],
+    queryFn: () => api.get<Patient[]>(`/api/patients?search=${encodeURIComponent(debouncedPatientSearch)}`),
+    enabled: debouncedPatientSearch.length >= 2,
   });
 
   const createMutation = useMutation({
