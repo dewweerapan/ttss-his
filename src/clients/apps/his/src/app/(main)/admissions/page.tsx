@@ -60,8 +60,11 @@ export default function AdmissionsPage() {
 
   const { data: patientResults = [] } = useQuery({
     queryKey: ['patients', 'search', debouncedPatientSearch],
-    queryFn: () => api.get<Patient[]>(`/api/patients?search=${encodeURIComponent(debouncedPatientSearch)}`),
-    enabled: debouncedPatientSearch.length >= 2,
+    queryFn: () => api.get<Patient[]>(
+      debouncedPatientSearch
+        ? `/api/patients?search=${encodeURIComponent(debouncedPatientSearch)}&pageSize=20`
+        : `/api/patients?pageSize=20`
+    ),
   });
 
   const { data: doctors = [] } = useQuery({

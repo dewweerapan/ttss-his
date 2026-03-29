@@ -32,8 +32,11 @@ export default function LabResultsPage() {
 
   const { data: patients = [], isFetching: searching } = useQuery({
     queryKey: ['patient-search', debouncedSearchHn],
-    queryFn: () => api.get<Patient[]>(`/api/patients?search=${debouncedSearchHn}`),
-    enabled: debouncedSearchHn.length >= 2,
+    queryFn: () => api.get<Patient[]>(
+      debouncedSearchHn
+        ? `/api/patients?search=${encodeURIComponent(debouncedSearchHn)}&pageSize=20`
+        : `/api/patients?pageSize=20`
+    ),
   });
 
   const { data: history = [], isFetching: loadingHistory } = useQuery({
@@ -57,11 +60,11 @@ export default function LabResultsPage() {
         <Stack gap="sm">
           <Text fw={500}>ค้นหาผู้ป่วย</Text>
           <TextInput
-            placeholder="พิมพ์ HN หรือชื่อ (อย่างน้อย 2 ตัวอักษร)..."
+            placeholder="พิมพ์ HN หรือชื่อเพื่อกรอง..."
             value={searchHn}
             onChange={e => setSearchHn(e.target.value)}
           />
-          {searchHn.length >= 2 && (
+          {!selectedPatient && (
             <Table highlightOnHover>
               <Table.Thead>
                 <Table.Tr>

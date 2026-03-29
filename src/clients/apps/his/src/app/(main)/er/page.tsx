@@ -55,8 +55,11 @@ export default function ErPage() {
 
   const { data: patientResults = [] } = useQuery({
     queryKey: ['patients', 'search', debouncedPatientSearch],
-    queryFn: () => api.get<{ items: Patient[] }>(`/api/patients?search=${encodeURIComponent(debouncedPatientSearch)}`).then(r => r.items ?? []),
-    enabled: debouncedPatientSearch.length >= 2,
+    queryFn: () => api.get<{ items: Patient[] }>(
+      debouncedPatientSearch
+        ? `/api/patients?search=${encodeURIComponent(debouncedPatientSearch)}&pageSize=20`
+        : `/api/patients?pageSize=20`
+    ).then(r => r.items ?? []),
   });
 
   const registerMutation = useMutation({

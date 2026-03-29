@@ -39,8 +39,11 @@ export default function PhrPage() {
 
   const { data: patients = [] } = useQuery({
     queryKey: ['patient-search-phr', debouncedSearchHn],
-    queryFn: () => api.get<Patient[]>(`/api/patients?search=${debouncedSearchHn}`),
-    enabled: debouncedSearchHn.length >= 2,
+    queryFn: () => api.get<Patient[]>(
+      debouncedSearchHn
+        ? `/api/patients?search=${encodeURIComponent(debouncedSearchHn)}&pageSize=20`
+        : `/api/patients?pageSize=20`
+    ),
   });
 
   const { data: encounters = [] } = useQuery({
@@ -87,11 +90,11 @@ export default function PhrPage() {
         <Stack gap="sm">
           <Text fw={500}>ค้นหาผู้ป่วย</Text>
           <TextInput
-            placeholder="พิมพ์ HN หรือชื่อ..."
+            placeholder="พิมพ์ HN หรือชื่อเพื่อกรอง..."
             value={searchHn}
             onChange={e => setSearchHn(e.target.value)}
           />
-          {searchHn.length >= 2 && (
+          {!selectedPatient && (
             <Table highlightOnHover>
               <Table.Thead>
                 <Table.Tr><Table.Th>HN</Table.Th><Table.Th>ชื่อ</Table.Th><Table.Th></Table.Th></Table.Tr>

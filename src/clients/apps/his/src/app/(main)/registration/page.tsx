@@ -56,9 +56,10 @@ export default function RegistrationPage() {
     queryKey: ['patients', debouncedSearch],
     queryFn: () =>
       api.get<PatientListResponse>(
-        `/api/patients?search=${encodeURIComponent(debouncedSearch)}&pageSize=30`
+        debouncedSearch
+          ? `/api/patients?search=${encodeURIComponent(debouncedSearch)}&pageSize=30`
+          : `/api/patients?pageSize=30`
       ),
-    enabled: debouncedSearch.length >= 2,
   });
 
   const { data: divisions } = useQuery({
@@ -152,7 +153,7 @@ export default function RegistrationPage() {
       <Paper withBorder p="md">
         <Group>
           <TextInput
-            placeholder="ค้นหา HN / ชื่อ / เลขบัตรประชาชน"
+            placeholder="กรอง HN / ชื่อ / เลขบัตรประชาชน..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
